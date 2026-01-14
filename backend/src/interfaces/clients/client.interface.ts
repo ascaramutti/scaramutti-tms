@@ -13,6 +13,5 @@ export interface ClientRequest {
     name: string;
     ruc: string;
     phone?: string;
-    address?: string;
     contactName?: string;
 }
