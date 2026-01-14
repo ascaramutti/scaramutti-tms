@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, QueryResultRow } from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -16,5 +16,5 @@ pool.on('error', (err) => {
     process.exit(-1);
 });
 
-export const query = (text: string, params?: any[]) => pool.query(text, params);
+export const query = <T extends QueryResultRow = any>(text: string, params?: any[]) => pool.query<T>(text, params);
 export default pool;

@@ -2,8 +2,9 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { query } from './config/db';
-import { HealthResponse } from './interfaces/health/health';
-import { ErrorResponse } from './interfaces/error/error';
+import { HealthResponse } from './interfaces/health/health.interface';
+import { ErrorResponse } from './interfaces/error/error.interface';
+import authRouter from './routes/auth.route';
 
 dotenv.config();
 
@@ -26,6 +27,8 @@ app.get('/api/health', async (req: Request, res: Response<HealthResponse | Error
         res.status(500).json({ status: 'ERROR', message: 'Database connection failed' });
     }
 });
+
+app.use('/api/auth', authRouter);
 
 
 app.listen(PORT, () => {

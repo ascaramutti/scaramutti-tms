@@ -44,11 +44,11 @@ INSERT INTO workers (first_name, last_name, dni, position) VALUES
 -- 6. USERS (Usuarios del Sistema - Roles asignados)
 -- Password '123456' hasheado: $2b$10$3euPcmQFCib0Yf/u.wndu.g5qQYd7j54c4e9.18Yw1.1
 INSERT INTO users (worker_id, username, password_hash, role_id) VALUES 
-(1, 'ascaramutti', '$2b$10$3euPcmQFCib0Yf/u.wndu.g5qQYd7j54c4e9.18Yw1.1', 4), -- GM
-(2, 'mventas', '$2b$10$3euPcmQFCib0Yf/u.wndu.g5qQYd7j54c4e9.18Yw1.1', 2), -- Sales
-(3, 'jdispatcher', '$2b$10$3euPcmQFCib0Yf/u.wndu.g5qQYd7j54c4e9.18Yw1.1', 3), -- Dispatcher
-(4, 'poperaciones', '$2b$10$3euPcmQFCib0Yf/u.wndu.g5qQYd7j54c4e9.18Yw1.1', 5), -- Ops Manager
-(5, 'admin', '$2b$10$3euPcmQFCib0Yf/u.wndu.g5qQYd7j54c4e9.18Yw1.1', 1); -- Admin
+(1, 'ascaramutti', '$2b$10$e4GfzT1LpBeaxAeueAJzdeMuvwNfx.vhXeKR7G.lcuNrCV/ZzdWXq', 4), -- GM
+(2, 'mventas', '$2b$10$e4GfzT1LpBeaxAeueAJzdeMuvwNfx.vhXeKR7G.lcuNrCV/ZzdWXq', 2), -- Sales
+(3, 'jdispatcher', '$2b$10$e4GfzT1LpBeaxAeueAJzdeMuvwNfx.vhXeKR7G.lcuNrCV/ZzdWXq', 3), -- Dispatcher
+(4, 'poperaciones', '$2b$10$e4GfzT1LpBeaxAeueAJzdeMuvwNfx.vhXeKR7G.lcuNrCV/ZzdWXq', 5), -- Ops Manager
+(5, 'admin', '$2b$10$e4GfzT1LpBeaxAeueAJzdeMuvwNfx.vhXeKR7G.lcuNrCV/ZzdWXq', 1); -- Admin
 
 -- 7. CLIENTS
 INSERT INTO clients (name, ruc, contact_name, phone) VALUES 

@@ -67,7 +67,7 @@ CREATE TABLE workers (
 -- 3. USERS (Acceso al Sistema)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    worker_id INT UNIQUE REFERENCES workers(id),
+    worker_id INT UNIQUE NOT NULL REFERENCES workers(id),
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role_id INT REFERENCES roles(id),
