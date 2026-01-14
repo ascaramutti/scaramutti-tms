@@ -64,7 +64,7 @@ CREATE TABLE users (
 -- 4. CLIENTS (Clientes)
 CREATE TABLE clients (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
+    name VARCHAR(200) UNIQUE NOT NULL,
     ruc VARCHAR(11) UNIQUE NOT NULL,
     phone VARCHAR(9),
     contact_name VARCHAR(100),

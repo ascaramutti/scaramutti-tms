@@ -42,7 +42,7 @@ export const createClient = async (req: Request<{}, {}, ClientRequest>, res: Res
             RETURNING *
         `;
 
-        const result = await query<Client>(sql, [name, ruc, phone, contactName]);
+        const result = await query<Client>(sql, [name.toUpperCase(), ruc, phone, contactName]);
         res.status(201).json(result.rows[0]);
 
     } catch (error: any) {

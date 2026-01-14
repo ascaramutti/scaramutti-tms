@@ -52,11 +52,11 @@ INSERT INTO users (worker_id, username, password_hash, role_id) VALUES
 
 -- 7. CLIENTS
 INSERT INTO clients (name, ruc, contact_name, phone) VALUES 
-('Alicorp S.A.A.', '20100055237', 'Maria Gomez', '999888777'),
-('SiderPeru', '20100035041', 'Roberto Manrique', '988555222'),
-('Aceros Arequipa', '20345678901', 'Logistica Recepcion', '912345678'),
-('Gloria S.A.', '20100190797', 'Fernando Torres', '955444333'),
-('Cementos Pacasmayo', '20419387658', 'Lucia Fernandez', '966777888');
+('ALICORP SAA', '20100055237', 'Maria Gomez', '999888777'),
+('SIDERPERU', '20100035041', 'Roberto Manrique', '988555222'),
+('ACEROS AREQUIPA', '20345678901', 'Logistica Recepcion', '912345678'),
+('GLORIA SA', '20100190797', 'Fernando Torres', '955444333'),
+('CEMENTOS PACASMAYO', '20419387658', 'Lucia Fernandez', '966777888');
 
 -- 8. RECURSOS FISICOS
 
@@ -82,11 +82,11 @@ INSERT INTO trailers (plate, type, status_id) VALUES
 
 -- 9. CARGO TYPES
 INSERT INTO cargo_types (name, description, standard_weight, standard_length) VALUES 
-('Contenedor 40ft', 'Contenedor estándar', 30000.00, 12.00),
-('Bobinas de Acero', 'Transporte especial pesado', 32000.00, 6.00),
-('Carga General', 'Pallets diversos', 25000.00, 13.50),
-('Maquinaria Pesada', 'Cama baja requerida', 45000.00, 10.00),
-('Cemento a Granel', 'Tolvas', 35000.00, 8.00);
+('CONTENEDOR 40FT', 'Contenedor estándar', 30000.00, 12.00),
+('BOBINAS DE ACERO', 'Transporte especial pesado', 32000.00, 6.00),
+('CARGA GENERAL', 'Pallets diversos', 25000.00, 13.50),
+('MAQUINARIA PESADA', 'Cama baja requerida', 45000.00, 10.00),
+('CEMENTO A GRANEL', 'Tolvas', 35000.00, 8.00);
 
 -- 10. SERVICES (10 Servicios de prueba)
 INSERT INTO services (

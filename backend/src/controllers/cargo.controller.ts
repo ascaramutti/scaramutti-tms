@@ -39,7 +39,7 @@ export const createCargoType = async (req: Request<{}, {}, CargoTypeRequest>, re
         `;
 
         const values = [
-            name, 
+            name.toUpperCase(), 
             description || null,
             standardWeight || null,
             standardLength || null,
