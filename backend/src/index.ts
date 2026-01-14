@@ -6,6 +6,7 @@ import { HealthResponse } from './interfaces/health/health.interface';
 import { ErrorResponse } from './interfaces/error/error.interface';
 import authRouter from './routes/auth.route';
 import clientRouter from './routes/clients.route';
+import cargoRouter from './routes/cargo.route';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.get('/api/health', async (req: Request, res: Response<HealthResponse | Error
 
 app.use('/api/auth', authRouter);
 app.use('/api/clients', clientRouter);
+app.use('/api/cargo-types', cargoRouter);
 
 
 app.listen(PORT, () => {
