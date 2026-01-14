@@ -1,3 +1,5 @@
+import { Request } from "express";
+
 export interface User {
     id: number;
     username: string;
@@ -22,4 +24,14 @@ export interface AuthResponse {
         role_description: string;
         name: string;
     }
+}
+
+export interface TokenPayload {
+    id: number;
+    username: string;
+    role: string;
+}
+
+export interface AuthenticatedRequest extends Request {
+    user?: TokenPayload;
 }
