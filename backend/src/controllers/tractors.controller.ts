@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { query } from "../config/db";
-import { Tractor } from "../interfaces/tractors/tractor.interface";
+import { Tractor, TractorRequest } from "../interfaces/tractors/tractor.interface";
 import { ErrorResponse } from "../interfaces/error/error.interface";
 
 export const getTractors = async (req: Request, res: Response<Tractor[] | ErrorResponse>): Promise<void> => {
@@ -31,3 +31,46 @@ export const getTractors = async (req: Request, res: Response<Tractor[] | ErrorR
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
 };
+
+export const createTractor = async (req: Request<{}, {}, TractorRequest>, res: Response<Tractor | ErrorResponse>): Promise<void> => {
+    const { plate, brand, model, year } = req.body;
+
+    try {
+
+        if (!plate) {
+            res.status(400).json({ status: 'ERROR', message: 'Plate is required' });
+            return;
+        }
+
+        const statusSql = `SELECT id FROM resource_statuses WHERE name = 'available'`;
+        const statusResult = await query<{id: number}>(statusSql);
+        const availableStatusId = statusResult.rows[0]!.id;
+
+        const sql = `
+            INSERT INTO tractors (plate, brand, model, year, status_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+        `;
+
+        const result = await query<Tractor>(sql, [plate.toUpperCase(), brand, model, year, availableStatusId]);
+        const newTractor = result.rows[0]!;
+
+        const response: Tractor = {
+            id: newTractor.id,
+            plate: plate.toUpperCase(),
+            brand: brand || null,
+            model: model || null,
+            status: 'available',
+        };
+
+        res.status(201).json(response);
+
+    } catch (error: any) {
+        console.error(`Create Tractor ${error}`);
+        if (error.code === '23505') {
+            res.status(409).json({ status: 'ERROR', message: 'Tractor with this plate already exists' });
+            return;
+        }
+        res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
+    }
+}
