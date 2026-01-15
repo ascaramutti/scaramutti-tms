@@ -9,6 +9,7 @@ import clientRouter from './routes/clients.route';
 import cargoRouter from './routes/cargo.route';
 import driverRouter from './routes/drivers.route';
 import tractorRouter from './routes/tractors.route';
+import trailerRouter from './routes/trailers.route';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use('/api/clients', clientRouter);
 app.use('/api/cargo-types', cargoRouter);
 app.use('/api/drivers', driverRouter);
 app.use('/api/tractors', tractorRouter);
+app.use('/api/trailers', trailerRouter);
 
 
 app.listen(PORT, () => {
