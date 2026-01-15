@@ -7,7 +7,8 @@ import { ErrorResponse } from './interfaces/error/error.interface';
 import authRouter from './routes/auth.route';
 import clientRouter from './routes/clients.route';
 import cargoRouter from './routes/cargo.route';
-import driverRouter from './routes/drivers.route'
+import driverRouter from './routes/drivers.route';
+import tractorRouter from './routes/tractors.route';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/clients', clientRouter);
 app.use('/api/cargo-types', cargoRouter);
 app.use('/api/drivers', driverRouter);
+app.use('/api/tractors', tractorRouter);
 
 
 app.listen(PORT, () => {
