@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { query } from "../config/db";
-import { Trailer } from "../interfaces/trailers/trailer.interface";
+import { Trailer, TrailerRequest } from "../interfaces/trailers/trailer.interface";
 import { ErrorResponse } from "../interfaces/error/error.interface";
+import { json } from "node:stream/consumers";
 
 export const getTrailers = async (req: Request, res: Response<Trailer[] | ErrorResponse>): Promise<void> => {
     const { status } = req.query;
@@ -29,6 +30,46 @@ export const getTrailers = async (req: Request, res: Response<Trailer[] | ErrorR
 
     } catch (error: unknown) {
         console.error(`Get Trailers ${error}`);
+        res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
+    }
+};
+
+export const createTrailer = async (req: Request<{}, {}, TrailerRequest>, res: Response<Trailer | ErrorResponse>): Promise<void> => {
+    const { plate, type } = req.body;
+    try {
+        if(!plate) {
+            res.status(400).json({ status: 'ERROR', message: 'Plate is required' });
+            return;
+        }
+
+        const statusSql = `SELECT id FROM resource_statuses WHERE name = 'available'`;
+        const statusResult = await query<{id: number}>(statusSql);
+        const availableStatusId = statusResult.rows[0]!.id;
+
+        const sql = `
+            INSERT INTO trailers (plate, type, status_id)
+            VALUES ($1, $2, $3)
+            RETURNING id, is_active
+        `;
+
+        const result = await query(sql, [plate.toUpperCase(), type, availableStatusId]);
+        const newTrailer = result.rows[0]!;
+
+        const response: Trailer = {
+            id: newTrailer.id,
+            plate: plate.toUpperCase(),
+            type: type || null,
+            status: 'available'
+        }
+
+        res.status(201).json(response);
+
+    } catch (error: any) {
+        console.error(`Create Trailer ${error}`);
+        if (error.code === '23505') {
+            res.status(500).json({ status: 'ERROR', message: 'Traier with this plate already exists' });
+            return;
+        }
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
 }
