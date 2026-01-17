@@ -12,9 +12,9 @@ export interface Service {
     width?: number;
     height?: number;
     observations?: string;
-    price: number;
-    currency_id: number;
-    currency_code: string;
+    price?: number;
+    currency_id?: number;
+    currency_code?: string;
 
     driver_id?: number | null;
     driver_name?: string;
