@@ -110,14 +110,64 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
         const financialRoles = ['admin', 'general_manager', 'sales', 'operations_manager'];
         const services: Service[] = result.rows.map(service => {
             if (!financialRoles.includes(userRole || '')) {
-                const { price, currency_id, currency_code, ...safeService} = service;
+                const { price, currency_id, currency_code, ...safeService } = service;
                 return safeService;
             }
             return service;
-        });      
+        });
         res.status(200).json(services);
     } catch (error: unknown) {
         console.error(`Get Services Error: ${error}`);
+        res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
+    }
+};
+
+export const getServiceById = async (req: Request, res: Response<Service | ErrorResponse>): Promise<void> => {
+    const { id } = req.params;
+    try {
+        const sql = `
+            SELECT 
+                s.id,
+                s.client_id, c.name as client_name,
+                s.origin, s.destination, s.tentative_date,
+                s.cargo_type_id, ct.name as cargo_type_name,
+                s.weight, s.length, s.width, s.height, s.observations,
+                s.price,
+                s.currency_id, cur.code as currency_code,
+                
+                s.driver_id, (w.first_name || ' ' || w.last_name) as driver_name,
+                s.tractor_id, tr.plate as tractor_plate,
+                s.trailer_id, tl.plate as trailer_plate,
+                
+                s.status_id, ss.name as status_name
+            FROM services s
+            JOIN clients c ON s.client_id = c.id
+            JOIN cargo_types ct ON s.cargo_type_id = ct.id
+            JOIN currencies cur ON s.currency_id = cur.id
+            JOIN service_statuses ss ON s.status_id = ss.id
+            LEFT JOIN drivers d ON s.driver_id = d.id
+            LEFT JOIN workers w ON d.worker_id = w.id
+            LEFT JOIN tractors tr ON s.tractor_id = tr.id
+            LEFT JOIN trailers tl ON s.trailer_id = tl.id
+            
+            WHERE s.id = $1
+        `;
+        const result = await query<Service>(sql, [id]);
+        if (result.rows.length === 0) {
+            res.status(404).json({ status: 'ERROR', message: 'Service not found' });
+            return;
+        }
+        const service = result.rows[0]!;
+        const userRole = (req as AuthenticatedRequest).user?.role;
+        const financialRoles = ['admin', 'general_manager', 'sales', 'operations_manager'];
+        if (!financialRoles.includes(userRole || '')) {
+            const { price, currency_id, currency_code, ...safeService } = service;
+            res.status(200).json(safeService as Service);
+            return;
+        }
+        res.status(200).json(service);
+    } catch (error: unknown) {
+        console.error(`Get Service By ID Error: ${error}`);
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
 };
