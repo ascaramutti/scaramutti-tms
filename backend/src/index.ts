@@ -11,6 +11,7 @@ import driverRouter from './routes/drivers.route';
 import tractorRouter from './routes/tractors.route';
 import trailerRouter from './routes/trailers.route';
 import currencyRouter from './routes/currencies.route';
+import serviceStatusRouter from './routes/service-statuses.route';
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use('/api/drivers', driverRouter);
 app.use('/api/tractors', tractorRouter);
 app.use('/api/trailers', trailerRouter);
 app.use('/api/currencies', currencyRouter);
+app.use('/api/service-statuses', serviceStatusRouter);
 
 
 app.listen(PORT, () => {
