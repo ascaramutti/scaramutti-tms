@@ -24,11 +24,9 @@ INSERT INTO service_statuses (name, description) VALUES
 
 -- 4. ESTADOS DE RECURSOS
 INSERT INTO resource_statuses (name, description) VALUES 
-('available', 'Listo para ser asignado'),
-('maintenance', 'En taller o revisión'),
-('on_route', 'Actualmente en un servicio'),
-('assigned', 'Reservado para un servicio próximo'),
-('not_available', 'Baja temporal o descanso');
+('available', 'Listo para operar'),
+('maintenance', 'En taller o revisión mecánica'),
+('not_available', 'Baja temporal, descanso médico o vacaciones');
 
 -- 5. WORKERS (Staff Completo)
 INSERT INTO workers (first_name, last_name, dni, position) VALUES 

@@ -151,6 +151,8 @@ CREATE TABLE services (
     width DECIMAL(10, 2),
     height DECIMAL(10, 2),
     observations TEXT,
+
+    operational_notes TEXT,
     
     -- Económico
     price DECIMAL(10, 2),

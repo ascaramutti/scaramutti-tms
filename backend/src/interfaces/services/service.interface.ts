@@ -12,6 +12,7 @@ export interface Service {
     width?: number;
     height?: number;
     observations?: string;
+    operational_notes: string;
     price?: number;
     currency_id?: number;
     currency_code?: string;
@@ -45,4 +46,12 @@ export interface CreateServiceRequest {
 
     price: number;
     currencyId: number;
+}
+
+export interface AssignResourcesRequest {
+    driverId: number;
+    tractorId: number;
+    trailerId: number;
+    notes?: string;
+    force?: boolean;
 }
