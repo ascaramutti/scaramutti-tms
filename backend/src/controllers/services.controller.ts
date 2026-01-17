@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { query } from "../config/db";
-import { Service, CreateServiceRequest, AssignResourcesRequest } from "../interfaces/services/service.interface";
+import { Service, CreateServiceRequest, AssignResourcesRequest, ChangeStatusRequest } from "../interfaces/services/service.interface";
 import { ErrorResponse } from "../interfaces/error/error.interface";
 import { AuthenticatedRequest } from "../interfaces/auth/auth.interface";
 
@@ -305,6 +305,94 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
     } catch (error: any) {
         await query('ROLLBACK');
         console.error(`Assign Resources Error: ${error}`);
+        res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
+    }
+};
+
+export const changeStatus = async (req: Request, res: Response<Service | ErrorResponse>): Promise<void> => {
+    const { id } = req.params;
+    const { status, notes, date } = req.body as ChangeStatusRequest;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    if (!status) {
+        res.status(400).json({ status: 'ERROR', message: 'New status is required' });
+        return;
+    }
+
+    try {
+        await query('BEGIN');
+        const currentRes = await query<{ status_name: string }>(
+            `SELECT ss.name as status_name FROM services s JOIN service_statuses ss ON s.status_id = ss.id WHERE s.id = $1`,
+            [id]
+        );
+
+        if (currentRes.rows.length === 0) {
+            await query('ROLLBACK');
+            res.status(404).json({ status: 'ERROR', message: 'Service not found' });
+            return;
+        }
+        const currentStatus = currentRes.rows[0]!.status_name;
+
+        const validTransitions: Record<string, string[]> = {
+            'pending_assignment': ['cancelled'],
+            'pending_start': ['in_progress', 'cancelled'],
+            'in_progress': ['completed', 'cancelled'],
+            'completed': [],
+            'cancelled': []
+        };
+
+        if (!validTransitions[currentStatus]?.includes(status)) {
+            await query('ROLLBACK');
+            res.status(400).json({
+                status: 'ERROR',
+                message: `Transición inválida: No se puede pasar de '${currentStatus}' a '${status}'.`
+            });
+            return;
+        }
+
+        const newStatusRes = await query<{ id: number }>(`SELECT id FROM service_statuses WHERE name = $1`, [status]);
+        const newStatusId = newStatusRes.rows[0]?.id;
+
+        if (!newStatusId) {
+            await query('ROLLBACK');
+            res.status(400).json({ status: 'ERROR', message: `Invalid status name: ${status}` });
+            return;
+        }
+
+        const timestamp = new Date().toLocaleString('es-PE');
+        let noteAppend = '';
+        if (notes) {
+            noteAppend = `\n[${timestamp}] CAMBIO A ${status.toUpperCase()}: ${notes || ''}`;
+        }
+        if (date) {
+            noteAppend += ` (Fecha Manual: ${date})`;
+        }
+
+        const updateSql = `
+            UPDATE services
+            SET 
+                status_id = $1,
+                updated_by = $2,
+                updated_at = NOW(),
+                operational_notes = COALESCE(operational_notes, '') || $3,
+                start_date_time = CASE WHEN $5 = 'in_progress' THEN COALESCE($6, NOW()) ELSE start_date_time END,
+                end_date_time = CASE WHEN $5 = 'completed' THEN COALESCE($6, NOW()) ELSE end_date_time END
+            WHERE id = $4
+            RETURNING *
+        `;
+        const result = await query<Service>(updateSql, [newStatusId, userId, noteAppend, id, status, date]);
+
+        await query(
+            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status) VALUES ($1, $2, 'STATUS_CHANGE', $3, $4, $5)`,
+            [id, userId, `Status updated to ${status}`, currentStatus, status]
+        );
+
+        await query('COMMIT');
+        res.status(200).json(result.rows[0]!);
+
+    } catch (error) {
+        await query('ROLLBACK');
+        console.error(`Change Status Error: ${error}`);
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
 };

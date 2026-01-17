@@ -29,6 +29,8 @@ export interface Service {
     status_id: number;
     status_name: string;
 
+    start_date_time?: Date | string;
+    end_date_time?: Date | string;
 }
 
 export interface CreateServiceRequest {
@@ -54,4 +56,10 @@ export interface AssignResourcesRequest {
     trailerId: number;
     notes?: string;
     force?: boolean;
+}
+
+export interface ChangeStatusRequest {
+    status: 'in_progress' | 'completed' | 'cancelled';
+    notes?: string;
+    date?: string;
 }

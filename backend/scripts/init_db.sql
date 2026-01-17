@@ -166,9 +166,9 @@ CREATE TABLE services (
     tractor_id INT REFERENCES tractors(id),
     trailer_id INT REFERENCES trailers(id),
     
-    -- Tiempos
-    start_date_time TIMESTAMP,
-    end_date_time TIMESTAMP,
+    -- Tiempos (Stored in UTC)
+    start_date_time TIMESTAMPTZ,
+    end_date_time TIMESTAMPTZ,
     
     -- Auditoría
     created_by INT REFERENCES users(id),
