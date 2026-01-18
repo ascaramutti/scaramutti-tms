@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { query } from "../config/db";
-import { Service, CreateServiceRequest, AssignResourcesRequest, ChangeStatusRequest } from "../interfaces/services/service.interface";
+import { Service, CreateServiceRequest, AssignResourcesRequest, ChangeStatusRequest, UpdateServiceRequest } from "../interfaces/services/service.interface";
 import { ErrorResponse } from "../interfaces/error/error.interface";
 import { AuthenticatedRequest } from "../interfaces/auth/auth.interface";
 
@@ -393,6 +393,116 @@ export const changeStatus = async (req: Request, res: Response<Service | ErrorRe
     } catch (error) {
         await query('ROLLBACK');
         console.error(`Change Status Error: ${error}`);
+        res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
+    }
+};
+
+export const updateService = async (req: Request, res: Response<Service | ErrorResponse>): Promise<void> => {
+    const { id } = req.params;
+    const body = req.body as UpdateServiceRequest;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    if (!body.description) {
+        res.status(400).json({ status: 'ERROR', message: 'Description (reason) is required for Admin Override' });
+        return;
+    }
+    const fieldMap: Record<string, string> = {
+        clientId: 'client_id',
+        origin: 'origin',
+        destination: 'destination',
+        tentativeDate: 'tentative_date',
+        cargoTypeId: 'cargo_type_id',
+        weight: 'weight',
+        length: 'length',
+        width: 'width',
+        height: 'height',
+        observations: 'observations',
+        price: 'price',
+        currencyId: 'currency_id',
+        driverId: 'driver_id',
+        tractorId: 'tractor_id',
+        trailerId: 'trailer_id',
+        statusId: 'status_id',
+        startDateTime: 'start_date_time',
+        endDateTime: 'end_date_time',
+        operationalNotes: 'operational_notes'
+    };
+
+    try {
+        await query('BEGIN');
+
+        const currentRes = await query<{ status_name: string }>(
+            `SELECT ss.name as status_name FROM services s JOIN service_statuses ss ON s.status_id = ss.id WHERE s.id = $1`,
+            [id]
+        );
+
+        if (currentRes.rows.length === 0) {
+            await query('ROLLBACK');
+            res.status(404).json({ status: 'ERROR', message: 'Service not found' });
+            return;
+        }
+        const oldStatusName = currentRes.rows[0]!.status_name;
+        let newStatusName = oldStatusName;
+
+        if (body.statusId) {
+            const statusRes = await query<{ name: string }>(`SELECT name FROM service_statuses WHERE id = $1`, [body.statusId]);
+            if (statusRes.rows[0]) {
+                newStatusName = statusRes.rows[0].name;
+            }
+        }
+
+        const updates: string[] = [];
+        const values: any[] = [];
+        let paramIndex = 1;
+
+        Object.keys(body).forEach(key => {
+            const dbCol = fieldMap[key];
+            if (dbCol && body[key as keyof UpdateServiceRequest] !== undefined) {
+                updates.push(`${dbCol} = $${paramIndex}`);
+                values.push(body[key as keyof UpdateServiceRequest]);
+                paramIndex++;
+            }
+        });
+
+        if (updates.length === 0) {
+            await query('ROLLBACK');
+            res.status(400).json({ status: 'ERROR', message: 'No fields to update' });
+            return;
+        }
+
+        updates.push(`updated_by = $${paramIndex}`);
+        values.push(userId);
+        paramIndex++;
+
+        updates.push(`updated_at = NOW()`);
+
+        values.push(id);
+        const sql = `
+            UPDATE services 
+            SET ${updates.join(', ')} 
+            WHERE id = $${paramIndex}
+            RETURNING *
+        `;
+
+        const result = await query<Service>(sql, values);
+
+        if (result.rows.length === 0) {
+            await query('ROLLBACK');
+            res.status(404).json({ status: 'ERROR', message: 'Service not found' });
+            return;
+        }
+
+        await query(
+            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status) VALUES ($1, $2, 'ADMIN_UPDATE', $3, $4, $5)`,
+            [id, userId, body.description, oldStatusName, newStatusName]
+        );
+
+        await query('COMMIT');
+        res.status(200).json(result.rows[0]);
+
+    } catch (error) {
+        await query('ROLLBACK');
+        console.error(`Admin Update Error: ${error}`);
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
 };
