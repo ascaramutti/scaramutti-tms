@@ -1,33 +1,107 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { LogOut } from "lucide-react";
+import { LogOut, User as UserIcon, Plus } from "lucide-react";
+import { dashboardService } from "../services/dashboard.service";
+import { StatsCards } from "../components/dashboard/StatsCards";
+import type { DashboardStats } from "../interfaces/dashboard.interface";
 
-export function DashboardPage () {
+export function DashboardPage() {
     const { user, logout } = useAuth();
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const data = await dashboardService.getStats();
+                setStats(data);
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    const handleNavigate = (route: string) => {
+        console.log("Navegando a:", route);
+    };
+
+    const getRoleName = (role: string = '') => {
+        const roles: Record<string, string> = {
+            admin: 'Administrador',
+            dispatcher: 'Despachador',
+            driver: 'Conductor',
+            general_manager: 'Gerente General',
+            operations_manager: 'Gerente de Operaciones',
+            sales: 'Ventas'
+        };
+        return roles[role] || role;
+    };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8">
-            <div className="max-w-7xl mx-auto">
-                <header className="flex justify-between items-center mb-8 bg-white p-6 rounded-lg shadow-sm">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Bienvenido, {user?.name}</h1>
-                        <p className="text-gray-500">Rol: {user?.role}</p>
+        <div className="min-h-screen bg-gray-50">
+            {/* Header exacto del prototipo */}
+            <header className="bg-white shadow-sm border-b">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">Sistema de Control de Viajes</h1>
+                            <p className="text-sm text-gray-600 mt-1">Dashboard de Operaciones</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg">
+                                <UserIcon className="w-5 h-5 text-gray-600" />
+                                <div className="text-right">
+                                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                                    <p className="text-xs text-gray-600">{getRoleName(user?.role)}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={logout}
+                                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <LogOut className="w-5 h-5" />
+                                <span className="text-sm font-medium">Salir</span>
+                            </button>
+                        </div>
                     </div>
-                    <button 
-                        onClick={logout}
-                        className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
-                    >
-                        <LogOut size={20} />
-                        Cerrar Sesión
-                    </button>
-                </header>
-
-                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                    <h2 className="text-xl font-semibold mb-4 text-blue-800">🎉 ¡Login Exitoso!</h2>
-                    <p className="text-gray-600">
-                        Si ves esto, todo el flujo de autenticación (Frontend - API - Base de Datos) está funcionando correctamente.
-                    </p>
                 </div>
-            </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-900">Resumen General</h2>
+                        <p className="text-sm text-gray-600 mt-1">Estadísticas del área de operaciones</p>
+                    </div>
+                    
+                    {/* Botón visible para todos EXCEPTO dispatcher */}
+                    {user?.role !== 'dispatcher' && (
+                        <button
+                            onClick={() => handleNavigate('/create-service')}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Crear Servicio
+                        </button>
+                    )}
+                </div>
+
+                <StatsCards 
+                    stats={stats} 
+                    isLoading={loading}
+                    onNavigate={handleNavigate}
+                />
+
+                {/* Grid para las listas futuras */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    {/* Aquí irán ServicesList, DriversList, etc. */}
+                </div>
+            </main>
         </div>
     );
 }
