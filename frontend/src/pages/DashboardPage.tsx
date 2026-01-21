@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { LogOut, User as UserIcon, Plus } from "lucide-react";
+import { LogOut, User as UserIcon, Plus, AlertCircle, RefreshCw } from "lucide-react"; 
 import { dashboardService } from "../services/dashboard.service";
 import { StatsCards } from "../components/dashboard/StatsCards";
 import type { DashboardStats } from "../interfaces/dashboard.interface";
@@ -9,19 +9,23 @@ export function DashboardPage() {
     const { user, logout } = useAuth();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null); 
+
+    const fetchStats = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const data = await dashboardService.getStats();
+            setStats(data);
+        } catch (error) {
+            console.error("Error fetching stats:", error);
+            setError("No se pudieron cargar las métricas. Por favor intente nuevamente.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const data = await dashboardService.getStats();
-                setStats(data);
-            } catch (error) {
-                console.error("Error fetching stats:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchStats();
     }, []);
 
@@ -91,11 +95,27 @@ export function DashboardPage() {
                     )}
                 </div>
 
-                <StatsCards 
-                    stats={stats} 
-                    isLoading={loading}
-                    onNavigate={handleNavigate}
-                />
+                {/* MANEJO DE ESTADOS: ERROR, CARGANDO, O DATOS */}
+                {error ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+                        <h3 className="text-lg font-medium text-red-900 mb-2">Error de conexión</h3>
+                        <p className="text-red-600 mb-4">{error}</p>
+                        <button 
+                            onClick={fetchStats}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            Intentar nuevamente
+                        </button>
+                    </div>
+                ) : (
+                    <StatsCards 
+                        stats={stats} 
+                        isLoading={loading}
+                        onNavigate={handleNavigate}
+                    />
+                )}
 
                 {/* Grid para las listas futuras */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
