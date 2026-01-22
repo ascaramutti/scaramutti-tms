@@ -86,41 +86,44 @@ INSERT INTO cargo_types (name, description, standard_weight, standard_length) VA
 ('MAQUINARIA PESADA', 'Cama baja requerida', 45000.00, 10.00),
 ('CEMENTO A GRANEL', 'Tolvas', 35000.00, 8.00);
 
+-- NUEVO: SERVICE TYPES (La tabla maestra)
+INSERT INTO service_types (name, description) VALUES
+('Local', 'Servicios dentro del área metropolitana'),
+('Provincia', 'Servicios interprovinciales / Larga distancia');
+
 -- 10. SERVICES (10 Servicios de prueba)
+-- Se agregan columnas: service_type_id, updated_by
 INSERT INTO services (
     client_id, origin, destination, tentative_date, 
+    service_type_id, -- NUEVO
     cargo_type_id, weight, observations, 
-    price, currency_id, status_id, created_by
+    price, currency_id, status_id, 
+    created_by, updated_by -- NUEVO REQUERIDO
 ) VALUES 
--- 1. Pendiente (Nuevo)
-(1, 'Callao, Lima', 'Arequipa, Centro', '2026-02-15', 1, 28000.00, 'Entregar antes del mediodía', 1500.00, 1, 1, 2),
--- 2. Pendiente (Nuevo)
-(3, 'Pisco', 'Lima', '2026-02-16', 2, 32000.00, 'Cuidado con lluvia', 4500.00, 2, 1, 2),
--- 3. Asignado (Listo para iniciar)
-(2, 'Chimbote', 'Trujillo', '2026-02-10', 3, 25000.00, 'Fragil', 1200.00, 1, 2, 3),
--- 4. En Progreso
-(4, 'Lima', 'Cajamarca', '2026-02-08', 1, 30000.00, 'Salida nocturna', 2000.00, 1, 3, 3),
--- 5. Completado
-(5, 'Pacasmayo', 'Chiclayo', '2026-01-20', 5, 35000.00, 'Todo OK', 800.00, 1, 4, 3),
--- 6. Cancelado
-(1, 'Callao', 'Huancayo', '2026-02-20', 1, 28000.00, 'Cancelado por cliente', 1800.00, 1, 5, 2),
--- 7. Pendiente (Urgente)
-(2, 'Lima', 'Ica', '2026-02-12', 2, 31000.00, 'URGENTE', 900.00, 1, 1, 2),
--- 8. En Progreso
-(3, 'Arequipa', 'Cusco', '2026-02-05', 2, 32000.00, 'Ruta con curvas', 3500.00, 1, 3, 3),
--- 9. Completado
-(4, 'Lima', 'Piura', '2026-01-15', 3, 15000.00, 'Carga ligera', 2200.00, 1, 4, 3),
--- 10. Pendiente Asignacion
-(5, 'Tarapoto', 'Moyobamba', '2026-03-01', 5, 34000.00, 'Acceso dificil', 3000.00, 2, 1, 2);
+-- 1. Pendiente (Nuevo) - Provincia (ID 2)
+(1, 'Callao, Lima', 'Arequipa, Centro', '2026-02-15', 2, 1, 28000.00, 'Entregar antes del mediodía', 1500.00, 1, 1, 2, 2),
+-- 2. Pendiente (Nuevo) - Local (ID 1)
+(3, 'Pisco', 'Lima', '2026-02-16', 1, 2, 32000.00, 'Cuidado con lluvia', 4500.00, 2, 1, 2, 2),
+-- 3. Asignado (Listo para iniciar) - Provincia
+(2, 'Chimbote', 'Trujillo', '2026-02-10', 2, 3, 25000.00, 'Fragil', 1200.00, 1, 2, 3, 3),
+-- 4. En Progreso - Provincia
+(4, 'Lima', 'Cajamarca', '2026-02-08', 2, 1, 30000.00, 'Salida nocturna', 2000.00, 1, 3, 3, 3),
+-- 5. Completado - Local
+(5, 'Pacasmayo', 'Chiclayo', '2026-01-20', 1, 5, 35000.00, 'Todo OK', 800.00, 1, 4, 3, 3),
+-- 6. Cancelado - Provincia
+(1, 'Callao', 'Huancayo', '2026-02-20', 2, 1, 28000.00, 'Cancelado por cliente', 1800.00, 1, 5, 2, 2),
+-- 7. Pendiente (Urgente) - Local
+(2, 'Lima', 'Ica', '2026-02-12', 1, 2, 31000.00, 'URGENTE', 900.00, 1, 1, 2, 2),
+-- 8. En Progreso - Provincia
+(3, 'Arequipa', 'Cusco', '2026-02-05', 2, 2, 32000.00, 'Ruta con curvas', 3500.00, 1, 3, 3, 3),
+-- 9. Completado - Provincia
+(4, 'Lima', 'Piura', '2026-01-15', 2, 3, 15000.00, 'Carga ligera', 2200.00, 1, 4, 3, 3),
+-- 10. Pendiente Asignacion - Local
+(5, 'Tarapoto', 'Moyobamba', '2026-03-01', 1, 5, 34000.00, 'Acceso dificil', 3000.00, 2, 1, 2, 2);
 
 -- Asignaciones manuales para los que no están 'pending_assignment'
--- Service 3 (Asignado)
 UPDATE services SET driver_id = 1, tractor_id = 1, trailer_id = 1 WHERE id = 3;
--- Service 4 (In Progress)
 UPDATE services SET driver_id = 2, tractor_id = 2, trailer_id = 2 WHERE id = 4;
--- Service 5 (Completed)
 UPDATE services SET driver_id = 3, tractor_id = 3, trailer_id = 3 WHERE id = 5;
--- Service 8 (In Progress)
 UPDATE services SET driver_id = 1, tractor_id = 1, trailer_id = 1 WHERE id = 8;
--- Service 9 (Completed)
 UPDATE services SET driver_id = 2, tractor_id = 2, trailer_id = 2 WHERE id = 9;

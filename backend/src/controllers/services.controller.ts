@@ -7,11 +7,12 @@ import { AuthenticatedRequest } from "../interfaces/auth/auth.interface";
 export const createService = async (req: Request<{}, {}, CreateServiceRequest>, res: Response<Service | ErrorResponse>): Promise<void> => {
     const userId = (req as AuthenticatedRequest).user?.id;
     const {
-        clientId, origin, destination, tentativeDate, cargoTypeId, weight, length, width, height, observations, price, currencyId
+        clientId, origin, destination, tentativeDate, serviceTypeId, cargoTypeId, 
+        weight, length, width, height, observations, price, currencyId
     } = req.body;
 
     try {
-        if (!clientId || !origin || !destination || !tentativeDate || !cargoTypeId || !weight || !price || !currencyId) {
+        if (!clientId || !origin || !destination || !tentativeDate || !serviceTypeId || !cargoTypeId || !weight || !price || !currencyId) {
             res.status(400).json({ status: 'ERROR', message: 'Missing required fields' });
             return;
         }
@@ -31,16 +32,18 @@ export const createService = async (req: Request<{}, {}, CreateServiceRequest>, 
         const sql = `
             INSERT INTO services (
                 client_id, origin, destination, tentative_date,
+                service_type_id,
                 cargo_type_id, weight, length, width, height, observations,
                 price, currency_id,
-                status_id, created_by
+                status_id, created_by, updated_by
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15)
             RETURNING *
         `;
 
         const values = [
             clientId, origin, destination, tentativeDate,
+            serviceTypeId,
             cargoTypeId, weight, length || null, width || null, height || null, observations || null,
             price, currencyId,
             pendingStatusId, userId
@@ -50,8 +53,8 @@ export const createService = async (req: Request<{}, {}, CreateServiceRequest>, 
         const newService = result.rows[0];
 
         const logSql = `
-            INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, new_status)
-            VALUES ($1, $2, 'CREATED', 'Service created', 'pending_assigment')
+            INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status)
+            VALUES ($1, $2, 'CREATED', 'Service created', 'N/A', 'pending_assigment')
         `;
         await query(logSql, [newService!.id, userId]);
 
@@ -74,6 +77,7 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
                 s.id,
                 s.client_id, c.name as client_name,
                 s.origin, s.destination, s.tentative_date,
+                s.service_type_id, st.name as service_type_name,
                 s.cargo_type_id, ct.name as cargo_type_name,
                 s.weight, s.length, s.width, s.height, s.observations,
                 s.operational_notes,
@@ -87,6 +91,7 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
                 s.status_id, ss.name as status_name
             FROM services s
             JOIN clients c ON s.client_id = c.id
+            JOIN service_types st ON s.service_type_id = st.id
             JOIN cargo_types ct ON s.cargo_type_id = ct.id
             JOIN currencies cur ON s.currency_id = cur.id
             JOIN service_statuses ss ON s.status_id = ss.id
@@ -142,6 +147,7 @@ export const getServiceById = async (req: Request, res: Response<Service | Error
                 s.id,
                 s.client_id, c.name as client_name,
                 s.origin, s.destination, s.tentative_date,
+                 s.service_type_id, st.name as service_type_name,
                 s.cargo_type_id, ct.name as cargo_type_name,
                 s.weight, s.length, s.width, s.height, s.observations,
                 s.operational_notes,
@@ -155,6 +161,7 @@ export const getServiceById = async (req: Request, res: Response<Service | Error
                 s.status_id, ss.name as status_name
             FROM services s
             JOIN clients c ON s.client_id = c.id
+            JOIN service_types st ON s.service_type_id = st.id
             JOIN cargo_types ct ON s.cargo_type_id = ct.id
             JOIN currencies cur ON s.currency_id = cur.id
             JOIN service_statuses ss ON s.status_id = ss.id
@@ -411,6 +418,7 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
         origin: 'origin',
         destination: 'destination',
         tentativeDate: 'tentative_date',
+        serviceTypeId: 'service_type_id',
         cargoTypeId: 'cargo_type_id',
         weight: 'weight',
         length: 'length',

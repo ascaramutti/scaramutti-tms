@@ -5,6 +5,7 @@
 -- Eliminar tablas si existen (Orden inverso a dependencias)
 DROP TABLE IF EXISTS service_audit_logs CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
+DROP TABLE IF EXISTS service_types CASCADE;
 DROP TABLE IF EXISTS cargo_types CASCADE;
 DROP TABLE IF EXISTS trailers CASCADE;
 DROP TABLE IF EXISTS tractors CASCADE;
@@ -24,16 +25,16 @@ CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     description TEXT,
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- Monedas
 CREATE TABLE currencies (
     id SERIAL PRIMARY KEY,
     code CHAR(3) UNIQUE NOT NULL,
-    symbol VARCHAR(5),
+    symbol VARCHAR(5) NOT NULL,
     name VARCHAR(50),
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- Estados de Servicio
@@ -41,7 +42,7 @@ CREATE TABLE service_statuses (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     description TEXT,
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- Estados de Recursos
@@ -49,7 +50,15 @@ CREATE TABLE resource_statuses (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     description TEXT,
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+
+CREATE TABLE service_types (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- 2. WORKERS (Recursos Humanos)
@@ -59,9 +68,9 @@ CREATE TABLE workers (
     last_name VARCHAR(100) NOT NULL,
     dni VARCHAR(8) UNIQUE NOT NULL,
     phone VARCHAR(9),
-    position VARCHAR(100),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    position VARCHAR(100) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 3. USERS (Acceso al Sistema)
@@ -70,9 +79,9 @@ CREATE TABLE users (
     worker_id INT UNIQUE NOT NULL REFERENCES workers(id),
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role_id INT REFERENCES roles(id),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    role_id INT NOT NULL REFERENCES roles(id),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 4. CLIENTS (Clientes)
@@ -82,8 +91,8 @@ CREATE TABLE clients (
     ruc VARCHAR(11) UNIQUE NOT NULL,
     phone VARCHAR(9),
     contact_name VARCHAR(100),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 5. RECURSOS
@@ -91,12 +100,12 @@ CREATE TABLE clients (
 -- Drivers
 CREATE TABLE drivers (
     id SERIAL PRIMARY KEY,
-    worker_id INT UNIQUE REFERENCES workers(id),
+    worker_id INT NOT NULL UNIQUE REFERENCES workers(id),
     license_number VARCHAR(20) UNIQUE NOT NULL,
     category VARCHAR(20),
-    status_id INT REFERENCES resource_statuses(id), 
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    status_id INT NOT NULL REFERENCES resource_statuses(id), 
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tractors
@@ -106,19 +115,19 @@ CREATE TABLE tractors (
     brand VARCHAR(50),
     model VARCHAR(50),
     year INT,
-    status_id INT REFERENCES resource_statuses(id),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    status_id INT NOT NULL REFERENCES resource_statuses(id),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Trailers
 CREATE TABLE trailers (
     id SERIAL PRIMARY KEY,
     plate VARCHAR(6) UNIQUE NOT NULL,
-    type VARCHAR(50),
-    status_id INT REFERENCES resource_statuses(id),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    type VARCHAR(50) NOT NULL,
+    status_id INT NOT NULL REFERENCES resource_statuses(id),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 6. CARGO TYPES
@@ -130,8 +139,8 @@ CREATE TABLE cargo_types (
     standard_length DECIMAL(10, 2),
     standard_width DECIMAL(10, 2),
     standard_height DECIMAL(10, 2),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 7. SERVICES
@@ -139,14 +148,16 @@ CREATE TABLE services (
     id SERIAL PRIMARY KEY,
     
     -- Cliente y Ruta
-    client_id INT REFERENCES clients(id),
+    client_id INT NOT NULL REFERENCES clients(id),
     origin VARCHAR(255) NOT NULL,
     destination VARCHAR(255) NOT NULL,
-    tentative_date DATE,
+    tentative_date DATE NOT NULL,
+
+    service_type_id INT NOT NULL REFERENCES service_types(id),
     
     -- Carga
-    cargo_type_id INT REFERENCES cargo_types(id),
-    weight DECIMAL(10, 2),
+    cargo_type_id INT NOT NULL REFERENCES cargo_types(id),
+    weight DECIMAL(10, 2) NOT NULL,
     length DECIMAL(10, 2),
     width DECIMAL(10, 2),
     height DECIMAL(10, 2),
@@ -155,11 +166,11 @@ CREATE TABLE services (
     operational_notes TEXT,
     
     -- Económico
-    price DECIMAL(10, 2),
-    currency_id INT REFERENCES currencies(id),
+    price DECIMAL(10, 2) NOT NULL,
+    currency_id INT NOT NULL REFERENCES currencies(id),
     
     -- Estado
-    status_id INT REFERENCES service_statuses(id),
+    status_id INT NOT NULL REFERENCES service_statuses(id),
     
     -- Asignación
     driver_id INT REFERENCES drivers(id),
@@ -171,23 +182,23 @@ CREATE TABLE services (
     end_date_time TIMESTAMPTZ,
     
     -- Auditoría
-    created_by INT REFERENCES users(id),
-    updated_by INT REFERENCES users(id),
+    created_by INT NOT NULL REFERENCES users(id),
+    updated_by INT NOT NULL REFERENCES users(id),
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 8. SERVICE LOGS
 CREATE TABLE service_audit_logs (
     id SERIAL PRIMARY KEY,
-    service_id INT REFERENCES services(id) ON DELETE CASCADE,
-    changed_by INT REFERENCES users(id),
+    service_id INT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    changed_by INT NOT NULL REFERENCES users(id),
     change_type VARCHAR(50) NOT NULL,
-    description TEXT,
-    old_status VARCHAR(50), -- Valor anterior (ej: pending)
-    new_status VARCHAR(50), -- Valor nuevo (ej: in_progress)
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    description TEXT NOT NULL,
+    old_status VARCHAR(50) NOT NULL, -- Valor anterior (ej: pending)
+    new_status VARCHAR(50) NOT NULL, -- Valor nuevo (ej: in_progress)
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indices

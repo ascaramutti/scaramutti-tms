@@ -5,6 +5,8 @@ export interface Service {
     origin: string;
     destination: string;
     tentative_date: Date | string;
+    service_type_id: number;
+    service_type_name: string;
     cargo_type_id: number;
     cargo_type_name: string;
     weight: number;
@@ -39,6 +41,8 @@ export interface CreateServiceRequest {
     destination: string;
     tentativeDate: string;
 
+    serviceTypeId: number;
+
     cargoTypeId: number;
     weight: number;
     length?: number;
@@ -70,6 +74,8 @@ export interface UpdateServiceRequest {
     destination?: string;
     tentativeDate?: string;
 
+    serviceTypeId?: number;
+    
     cargoTypeId?: number;
     weight?: number;
     length?: number;
