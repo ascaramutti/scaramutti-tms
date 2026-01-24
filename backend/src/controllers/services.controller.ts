@@ -255,7 +255,7 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
 
             if (routeConflicts.rows.length > 0) {
                 const conflictIds = routeConflicts.rows.map(row => `#${row.id}`).join(', ');
-                warnings.push(`Operativo: Uno de los recursos está ACTUALMENTE EN RUTA en el Servicio #${conflictIds}.`);
+                warnings.push(`Operativo: Uno de los recursos está ACTUALMENTE EN RUTA en el Servicio ${conflictIds}.`);
             }
 
             if (warnings.length > 0) {
