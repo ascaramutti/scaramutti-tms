@@ -1,8 +1,9 @@
-import { Clock, MapPin, Package, UserCircle, Truck, Ruler, Weight, User, Play } from 'lucide-react';
+import { Clock, MapPin, Package, UserCircle, Truck, Ruler, Weight, User, Play, CheckCircle } from 'lucide-react';
 import type { ServiceCardProps } from '../../interfaces/components.interface';
 
 export function ServiceCard({ service, variant = 'pending', onAction, onViewDetail }: ServiceCardProps) {
 
+  // Configuración de variantes de estado
   const config = {
       pending: {
           color: 'bg-yellow-500',
@@ -18,6 +19,14 @@ export function ServiceCard({ service, variant = 'pending', onAction, onViewDeta
           label: 'Pendiente de Inicio',
           actionLabel: 'Iniciar Servicio',
           actionIcon: Play,
+          showResources: true
+      },
+      in_progress: {
+          color: 'bg-emerald-500',
+          hover: 'hover:bg-emerald-600',
+          label: 'En Ejecución',
+          actionLabel: 'Finalizar Servicio',
+          actionIcon: CheckCircle,
           showResources: true
       }
   }[variant];
@@ -89,6 +98,7 @@ export function ServiceCard({ service, variant = 'pending', onAction, onViewDeta
                       </span>
                   )}
                </div>
+
             </div>
           </div>
         </div>
@@ -148,9 +158,9 @@ export function ServiceCard({ service, variant = 'pending', onAction, onViewDeta
                     <div className="flex items-center gap-1 text-gray-900">
                         <Truck className="w-4 h-4" />
                         <span className="font-medium">
-                          {service.tractor_plate || 'N/A'}
-                          {service.trailer_plate ? ` / ${service.trailer_plate}` : ''}
-                          </span>
+                            {service.tractor_plate || 'N/A'} 
+                            {service.trailer_plate ? ` / ${service.trailer_plate}` : ''}
+                        </span>
                     </div>
                 </div>
              </>

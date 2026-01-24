@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage.tsx';
 import CreateServicePage from './pages/services/CreateServicePage.tsx';
 import PendingServicesPage from './pages/services/PendingServicesPage.tsx';
 import PendingStartServicesPage from './pages/services/PendingStartServicePage.tsx';
+import InProgressServicesPage from './pages/services/InProgressServicePage.tsx';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -57,6 +58,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PendingStartServicesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/services/in-progress"
+            element={
+              <ProtectedRoute>
+                <InProgressServicesPage />
               </ProtectedRoute>
             }
           />

@@ -37,7 +37,7 @@ export function StatsCards({ stats, onNavigate, isLoading }: StatsCardsProps) {
       display: stats.services.in_progress,
       icon: PlayCircle,
       color: 'bg-emerald-500',
-      route: '/services?status=in_progress',
+      route: '/services/in-progress',
       clickable: true,
     },
     {
