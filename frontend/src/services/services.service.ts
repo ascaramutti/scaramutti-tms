@@ -1,5 +1,6 @@
 import api from './api';
 import type { Service, CreateServiceRequest } from '../interfaces/services.interface';
+import type { AssignResourcesPayload } from '../interfaces/resources.interface';
 
 export const servicesService = {
     getServices: async (filters?: { status?: string; date?: string; clientId?: number }): Promise<Service[]> => {
@@ -18,6 +19,11 @@ export const servicesService = {
 
     getServiceById: async (id: number): Promise<Service> => {
         const response = await api.get<Service>(`/services/${id}`);
+        return response.data;
+    },
+
+    assignResources: async (serviceId: number, data: AssignResourcesPayload): Promise<Service> => {
+        const response = await api.patch<Service>(`/services/${serviceId}/assign`, data);
         return response.data;
     }
 };
