@@ -121,7 +121,7 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
             paramIndex++;
         }
 
-        sql += ` ORDER BY s.created_at DESC`;
+        sql += ` ORDER BY s.tentative_date ASC, s.created_at ASC`;
         const result = await query<Service>(sql, params);
         const userRole = (req as AuthenticatedRequest).user?.role;
         const financialRoles = ['admin', 'general_manager', 'sales', 'operations_manager'];
