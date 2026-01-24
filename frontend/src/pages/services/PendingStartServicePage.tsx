@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User as UserIcon, ArrowLeft, Clock } from 'lucide-react';
+import { LogOut, User as UserIcon, ArrowLeft, Timer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { servicesService } from '../../services/services.service';
 import type { Service } from '../../interfaces/services.interface';
 import { ServiceCard } from '../../components/services/ServiceCard';
 import { toast } from 'sonner';
 
-export default function PendingServicesPage() {
+export default function PendingStartServicesPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Definir roles permitidos
-  const canModify = ['admin', 'general_manager', 'dispatcher', 'operations_manager'].includes(user?.role || '');
+  const canModify = ['admin', 'dispatcher', 'general_manager', 'operations_manager'].includes(user?.role || '');
 
   useEffect(() => {
     loadServices();
@@ -23,19 +23,18 @@ export default function PendingServicesPage() {
   const loadServices = async () => {
     try {
       setLoading(true);
-      const data = await servicesService.getServices({ status: 'pending_assignment' });
+      const data = await servicesService.getServices({ status: 'pending_start' });
       setServices(data);
     } catch (error) {
-      console.error('Error loading pending services:', error);
-      toast.error('No se pudieron cargar los servicios pendientes');
+      console.error('Error loading pending start services:', error);
+      toast.error('No se pudieron cargar los servicios pendientes de inicio');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAssign = (serviceId: number) => {
-    console.log('Assign service', serviceId);
-    toast.info(`Asignar recursos al servicio #${serviceId} (Próximamente)`);
+  const handleStartService = (serviceId: number) => {
+    toast.info(`Iniciar servicio #${serviceId} (Próximamente)`);
   };
 
   const getRoleName = (role: string = '') => {
@@ -65,9 +64,9 @@ export default function PendingServicesPage() {
               </button>
               <div className="h-8 w-px bg-gray-300"></div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Servicios Pendientes de Asignación</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Servicios Pendientes de Inicio</h1>
                 <p className="text-sm text-gray-600 mt-1">
-                    {loading ? 'Cargando...' : `${services.length} servicios esperando recursos`}
+                    {loading ? 'Cargando...' : `${services.length} servicios esperando inicio`}
                 </p>
               </div>
             </div>
@@ -102,8 +101,8 @@ export default function PendingServicesPage() {
                     <ServiceCard 
                         key={service.id} 
                         service={service} 
-                        variant="pending"
-                        onAction={canModify ? handleAssign : undefined}
+                        variant="pending_start" 
+                        onAction={canModify ? handleStartService : undefined}
                     />
                 ))}
             </div>
@@ -111,10 +110,10 @@ export default function PendingServicesPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
                 <div className="max-w-md mx-auto">
                     <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Clock className="w-8 h-8 text-gray-400" />
+                        <Timer className="w-8 h-8 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay servicios pendientes</h3>
-                    <p className="text-gray-600">Todos los servicios cuentan con recursos asignados.</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay servicios pendientes de inicio</h3>
+                    <p className="text-gray-600">Todos los servicios asignados han sido iniciados.</p>
                 </div>
             </div>
         )}

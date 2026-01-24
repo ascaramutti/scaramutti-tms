@@ -28,7 +28,7 @@ export function StatsCards({ stats, onNavigate, isLoading }: StatsCardsProps) {
       display: stats.services.pending_start,
       icon: Timer,
       color: 'bg-orange-500',
-      route: '/services?status=pending_start',
+      route: '/services/pending-start',
       clickable: true,
     },
     {

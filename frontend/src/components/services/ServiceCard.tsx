@@ -1,13 +1,26 @@
-import { Clock, MapPin, Package, UserCircle, Truck, Ruler, Weight } from 'lucide-react';
-import type { Service } from '../../interfaces/services.interface';
+import { Clock, MapPin, Package, UserCircle, Truck, Ruler, Weight, User, Play } from 'lucide-react';
+import type { ServiceCardProps } from '../../interfaces/components.interface';
 
-interface ServiceCardProps {
-  service: Service;
-  onAssign?: (id: number) => void;
-  onViewDetail?: (id: number) => void;
-}
+export function ServiceCard({ service, variant = 'pending', onAction, onViewDetail }: ServiceCardProps) {
 
-export function ServiceCard({ service, onAssign, onViewDetail }: ServiceCardProps) {
+  const config = {
+      pending: {
+          color: 'bg-yellow-500',
+          hover: 'hover:bg-yellow-600',
+          label: 'Pendiente',
+          actionLabel: 'Asignar Recursos',
+          actionIcon: Truck,
+          showResources: false
+      },
+      pending_start: {
+          color: 'bg-orange-500',
+          hover: 'hover:bg-orange-600',
+          label: 'Pendiente de Inicio',
+          actionLabel: 'Iniciar Servicio',
+          actionIcon: Play,
+          showResources: true
+      }
+  }[variant];
 
   // Helper para formatear dimensiones dinámicamente
   const formatDimensions = () => {
@@ -23,9 +36,9 @@ export function ServiceCard({ service, onAssign, onViewDetail }: ServiceCardProp
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-      {/* Header with Status Color */}
+      {/* Header with Dynamic Status Color */}
       <div 
-        className="bg-yellow-500 px-6 py-4 cursor-pointer hover:bg-yellow-600 transition-colors"
+        className={`${config.color} px-6 py-4 cursor-pointer ${config.hover} transition-colors`}
         onClick={() => onViewDetail?.(service.id)}
       >
         <div className="flex items-center justify-between">
@@ -33,7 +46,7 @@ export function ServiceCard({ service, onAssign, onViewDetail }: ServiceCardProp
             Servicio #{service.id}
           </h3>
           <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium text-white">
-            Pendiente
+            {config.label}
           </span>
         </div>
       </div>
@@ -76,7 +89,6 @@ export function ServiceCard({ service, onAssign, onViewDetail }: ServiceCardProp
                       </span>
                   )}
                </div>
-
             </div>
           </div>
         </div>
@@ -109,7 +121,7 @@ export function ServiceCard({ service, onAssign, onViewDetail }: ServiceCardProp
 
         <div className="h-px bg-gray-200"></div>
 
-        {/* Date & Action */}
+        {/* Info Grid (Date + Resources if applicable) */}
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Fecha Tentativa</span>
@@ -121,14 +133,37 @@ export function ServiceCard({ service, onAssign, onViewDetail }: ServiceCardProp
             </div>
           </div>
 
-          {onAssign && (
+          {/* Mostrar recursos asignados solo si la variante lo permite */}
+          {config.showResources && (
+             <>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Conductor</span>
+                    <div className="flex items-center gap-1 text-gray-900">
+                        <User className="w-4 h-4" />
+                        <span className="font-medium">{service.driver_name || 'N/A'}</span>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Unidad</span>
+                    <div className="flex items-center gap-1 text-gray-900">
+                        <Truck className="w-4 h-4" />
+                        <span className="font-medium">
+                          {service.tractor_plate || 'N/A'}
+                          {service.trailer_plate ? ` / ${service.trailer_plate}` : ''}
+                          </span>
+                    </div>
+                </div>
+             </>
+          )}
+
+          {onAction && (
             <div className="pt-2">
               <button
-                onClick={() => onAssign(service.id)}
-                className="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                onClick={() => onAction(service.id)}
+                className={`w-full ${config.color} text-white py-2 px-4 rounded-lg ${config.hover} transition-colors text-sm font-medium flex items-center justify-center gap-2`}
               >
-                <Truck className="w-4 h-4" />
-                Asignar Recursos
+                <config.actionIcon className="w-4 h-4" />
+                {config.actionLabel}
               </button>
             </div>
           )}
