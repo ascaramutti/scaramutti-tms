@@ -1,4 +1,4 @@
-import { Clock, MapPin, Package, UserCircle, Truck, Ruler, Weight, User, Play, CheckCircle } from 'lucide-react';
+import { Clock, MapPin, Package, UserCircle, Truck, Ruler, Weight, User, Play, CheckCircle, AlertCircle } from 'lucide-react'; 
 import type { ServiceCardProps } from '../../interfaces/components.interface';
 
 export function ServiceCard({ service, variant = 'pending', onAction, onViewDetail }: ServiceCardProps) {
@@ -53,6 +53,11 @@ export function ServiceCard({ service, variant = 'pending', onAction, onViewDeta
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             Servicio #{service.id}
+            {service.observations && (
+                <div className="group relative">
+                    <AlertCircle className="w-5 h-5 text-white stroke-2" />
+                </div>
+            )}
           </h3>
           <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium text-white">
             {config.label}

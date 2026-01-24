@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { servicesService } from '../../services/services.service';
 import type { Service } from '../../interfaces/services.interface';
 import { ServiceCard } from '../../components/services/ServiceCard';
+import { ServiceDetailModal } from '../../components/services/ServiceDetailModal';
 import { toast } from 'sonner';
 
 export default function PendingServicesPage() {
@@ -12,6 +13,7 @@ export default function PendingServicesPage() {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   // Definir roles permitidos
   const canModify = ['admin', 'general_manager', 'dispatcher', 'operations_manager'].includes(user?.role || '');
@@ -36,6 +38,16 @@ export default function PendingServicesPage() {
   const handleAssign = (serviceId: number) => {
     console.log('Assign service', serviceId);
     toast.info(`Asignar recursos al servicio #${serviceId} (Próximamente)`);
+  };
+
+  const handleViewDetail = async (serviceId: number) => {
+    try {
+        const fullService = await servicesService.getServiceById(serviceId);
+        setSelectedService(fullService);
+    } catch (error) {
+        console.error('Error fetching service detail:', error);
+        toast.error('No se pudo cargar el detalle del servicio');
+    }
   };
 
   const getRoleName = (role: string = '') => {
@@ -104,6 +116,7 @@ export default function PendingServicesPage() {
                         service={service} 
                         variant="pending"
                         onAction={canModify ? handleAssign : undefined}
+                        onViewDetail={handleViewDetail}
                     />
                 ))}
             </div>
@@ -119,6 +132,12 @@ export default function PendingServicesPage() {
             </div>
         )}
       </main>
+
+      <ServiceDetailModal 
+        isOpen={!!selectedService}
+        onClose={() => setSelectedService(null)}
+        service={selectedService}
+      />
     </div>
   );
 }
