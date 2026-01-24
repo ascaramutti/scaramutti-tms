@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage.tsx';
+import CreateServicePage from './pages/services/CreateServicePage.tsx';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -21,6 +23,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Toaster position='top-center' richColors/>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -28,6 +31,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create-service"
+            element={
+              <ProtectedRoute>
+                <CreateServicePage />
               </ProtectedRoute>
             }
           />

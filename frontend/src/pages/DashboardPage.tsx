@@ -4,9 +4,11 @@ import { LogOut, User as UserIcon, Plus, AlertCircle, RefreshCw } from "lucide-r
 import { dashboardService } from "../services/dashboard.service";
 import { StatsCards } from "../components/dashboard/StatsCards";
 import type { DashboardStats } from "../interfaces/dashboard.interface";
+import { useNavigate } from "react-router-dom";
 
 export function DashboardPage() {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null); 
@@ -30,7 +32,7 @@ export function DashboardPage() {
     }, []);
 
     const handleNavigate = (route: string) => {
-        console.log("Navegando a:", route);
+        navigate(route);
     };
 
     const getRoleName = (role: string = '') => {
