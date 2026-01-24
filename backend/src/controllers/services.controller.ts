@@ -7,7 +7,7 @@ import { AuthenticatedRequest } from "../interfaces/auth/auth.interface";
 export const createService = async (req: Request<{}, {}, CreateServiceRequest>, res: Response<Service | ErrorResponse>): Promise<void> => {
     const userId = (req as AuthenticatedRequest).user?.id;
     const {
-        clientId, origin, destination, tentativeDate, serviceTypeId, cargoTypeId, 
+        clientId, origin, destination, tentativeDate, serviceTypeId, cargoTypeId,
         weight, length, width, height, observations, price, currencyId
     } = req.body;
 
@@ -75,7 +75,7 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
         let sql = `
             SELECT 
                 s.id,
-                s.client_id, c.name as client_name,
+                s.client_id, c.name as client_name, c.ruc as client_ruc,
                 s.origin, s.destination, s.tentative_date,
                 s.service_type_id, st.name as service_type_name,
                 s.cargo_type_id, ct.name as cargo_type_name,
@@ -145,7 +145,7 @@ export const getServiceById = async (req: Request, res: Response<Service | Error
         const sql = `
             SELECT 
                 s.id,
-                s.client_id, c.name as client_name,
+                s.client_id, c.name as client_name, c.ruc as client_ruc,
                 s.origin, s.destination, s.tentative_date,
                  s.service_type_id, st.name as service_type_name,
                 s.cargo_type_id, ct.name as cargo_type_name,

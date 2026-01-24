@@ -2,6 +2,7 @@ export interface Service {
     id: number;
     client_id: number;
     client_name: string;
+    client_ruc: string;
     origin: string;
     destination: string;
     tentative_date: Date | string;
