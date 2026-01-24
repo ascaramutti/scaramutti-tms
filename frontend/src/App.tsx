@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import CreateServicePage from './pages/services/CreateServicePage.tsx';
+import PendingServicesPage from './pages/services/PendingServicesPage.tsx';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,7 +24,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Toaster position='top-center' richColors/>
+        <Toaster position='top-center' richColors />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -39,6 +40,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <CreateServicePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/services/pending"
+            element={
+              <ProtectedRoute>
+                <PendingServicesPage />
               </ProtectedRoute>
             }
           />

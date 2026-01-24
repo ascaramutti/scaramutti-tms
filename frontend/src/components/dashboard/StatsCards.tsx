@@ -3,7 +3,7 @@ import type { StatsCardsProps } from '../../interfaces/dashboard.interface.ts';
 
 
 export function StatsCards({ stats, onNavigate, isLoading }: StatsCardsProps) {
-  
+
   if (isLoading || !stats) {
     return (
       <div className="flex justify-center p-8 w-full">
@@ -19,7 +19,7 @@ export function StatsCards({ stats, onNavigate, isLoading }: StatsCardsProps) {
       display: stats.services.pending_assignment,
       icon: Clock,
       color: 'bg-yellow-500',
-      route: '/services?status=pending_assignment',
+      route: '/services/pending',
       clickable: true,
     },
     {
