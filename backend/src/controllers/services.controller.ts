@@ -81,6 +81,7 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
                 s.cargo_type_id, ct.name as cargo_type_name,
                 s.weight, s.length, s.width, s.height, s.observations,
                 s.operational_notes,
+                s.start_date_time, s.end_date_time,
                 s.price,
                 s.currency_id, cur.code as currency_code,
                 
@@ -151,6 +152,7 @@ export const getServiceById = async (req: Request, res: Response<Service | Error
                 s.cargo_type_id, ct.name as cargo_type_name,
                 s.weight, s.length, s.width, s.height, s.observations,
                 s.operational_notes,
+                s.start_date_time, s.end_date_time,
                 s.price,
                 s.currency_id, cur.code as currency_code,
                 
