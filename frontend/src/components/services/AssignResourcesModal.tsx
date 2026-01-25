@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { X, Truck, User, FileText, AlertCircle, Package, Ruler, Weight, MapPin, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { resourcesService } from '../../services/resources.service';
-import type { Driver, Tractor, Trailer, AssignResourcesPayload } from '../../interfaces/resources.interface';
-import type { Service } from '../../interfaces/services.interface';
+import type { Driver, Tractor, Trailer } from '../../interfaces/resources.interface';
+import type { Service, AssignResourcesPayload } from '../../interfaces/services.interface';
 
 interface AssignResourcesModalProps {
     isOpen: boolean;
@@ -238,7 +238,7 @@ export function AssignResourcesModal({ isOpen, onClose, service, onAssign }: Ass
                             >
                                 <option value="">Seleccione un conductor</option>
                                 {drivers.map(driver => (
-                                    <option key={driver.id} value={driver.id}>{driver.name} - {driver.license_category}</option>
+                                    <option key={driver.id} value={driver.id}>{driver.name}</option>
                                 ))}
                             </select>
                         </div>

@@ -7,7 +7,7 @@ import type { Service } from '../../interfaces/services.interface';
 import { ServiceCard } from '../../components/services/ServiceCard';
 import { ServiceDetailModal } from '../../components/services/ServiceDetailModal';
 import { AssignResourcesModal } from '../../components/services/AssignResourcesModal';
-import type { AssignResourcesPayload } from '../../interfaces/resources.interface';
+import type { AssignResourcesPayload } from '../../interfaces/services.interface';
 import { toast } from 'sonner';
 
 export default function PendingServicesPage() {
@@ -56,8 +56,6 @@ export default function PendingServicesPage() {
       loadServices();
       setAssigningService(null);
     } catch (error) {
-      console.error('Error assigning resources:', error);
-      toast.error('Error al asignar recursos');
       throw error;
     }
   };

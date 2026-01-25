@@ -164,15 +164,32 @@ export function ServiceDetailModal({ isOpen, onClose, service }: ServiceDetailMo
                         <div>
                             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Detalles Operativos</h3>
                             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="w-4 h-4 text-gray-400" />
-                                        <span className="text-sm text-gray-500">Fecha Tentativa</span>
+                                {service.status_name === 'in_progress' && service.start_date_time ? (
+                                    <div className="flex items-center justify-between p-2 -mx-2 bg-emerald-50 rounded-lg border border-emerald-100 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-4 h-4 text-emerald-600" />
+                                            <span className="text-sm font-medium text-emerald-900">Fecha Inicio</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-bold text-emerald-700 text-sm">
+                                                {new Date(service.start_date_time).toLocaleDateString()}
+                                            </p>
+                                            <p className="text-xs text-emerald-600">
+                                                {new Date(service.start_date_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <span className="font-medium text-gray-900">
-                                        {new Date(service.tentative_date).toLocaleDateString()}
-                                    </span>
-                                </div>
+                                ) : (
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-4 h-4 text-gray-400" />
+                                            <span className="text-sm text-gray-500">Fecha Tentativa</span>
+                                        </div>
+                                        <span className="font-medium text-gray-900">
+                                            {new Date(service.tentative_date).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                )}
 
                                 {/* Mostrar Precio solo si existe (Backend lo oculta si no es rol permitido) */}
                                 {service.price !== undefined && service.price !== null && (

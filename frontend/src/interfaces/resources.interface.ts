@@ -18,10 +18,3 @@ export interface Trailer {
     type: string;
     status: string;
 }
-export interface AssignResourcesPayload {
-    driverId: number;
-    tractorId: number;
-    trailerId: number;
-    notes?: string;
-    force?: boolean;
-}

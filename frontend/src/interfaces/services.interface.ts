@@ -16,6 +16,8 @@ export interface Service {
     height?: number;
     observations?: string;
     operational_notes?: string;
+    start_date_time?: string;
+    end_date_time?: string;
     price: number;
     currency_id: number;
     currency_code: string;
@@ -43,6 +45,20 @@ export interface CreateServiceRequest {
     observations?: string;
     price: number;
     currencyId: number;
+}
+
+export interface AssignResourcesPayload {
+    driverId: number;
+    tractorId: number;
+    trailerId: number;
+    notes?: string;
+    force?: boolean;
+}
+
+export interface ChangeStatusPayload {
+    status: string;
+    notes?: string;
+    date?: string;
 }
 
 export interface ServiceResponse<T = Service> {

@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, User as UserIcon, ArrowLeft, Timer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { servicesService } from '../../services/services.service';
-import type { Service } from '../../interfaces/services.interface';
+import type { Service, ChangeStatusPayload } from '../../interfaces/services.interface';
 import { ServiceCard } from '../../components/services/ServiceCard';
 import { ServiceDetailModal } from '../../components/services/ServiceDetailModal';
+import { StartServiceModal } from '../../components/services/StartServiceModal';
 import { toast } from 'sonner';
 
 export default function PendingStartServicesPage() {
@@ -14,6 +15,7 @@ export default function PendingStartServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [startingService, setStartingService] = useState<Service | null>(null);
 
   // Definir roles permitidos
   const canModify = ['admin', 'dispatcher', 'general_manager', 'operations_manager'].includes(user?.role || '');
@@ -35,28 +37,48 @@ export default function PendingStartServicesPage() {
     }
   };
 
-  const handleStartService = (serviceId: number) => {
-    toast.info(`Iniciar servicio #${serviceId} (Próximamente)`);
+  const handleStartService = async (serviceId: number) => {
+    try {
+      const fullService = await servicesService.getServiceById(serviceId);
+      setStartingService(fullService);
+    } catch (error) {
+      console.error('Error handling start service:', error);
+      toast.error('No se pudo cargar la información del servicio');
+    }
+  };
+
+  const handleStartSubmit = async (serviceId: number, data: ChangeStatusPayload) => {
+    try {
+      await servicesService.changeStatus(serviceId, data);
+      toast.success(`Servicio #${serviceId} iniciado correctamente`);
+
+      loadServices();
+      setStartingService(null);
+    } catch (error) {
+      console.error('Error starting service:', error);
+      toast.error('No se pudo iniciar el servicio');
+      throw error;
+    }
   };
 
   const handleViewDetail = async (serviceId: number) => {
     try {
-        const fullService = await servicesService.getServiceById(serviceId);
-        setSelectedService(fullService);
+      const fullService = await servicesService.getServiceById(serviceId);
+      setSelectedService(fullService);
     } catch (error) {
-        console.error('Error fetching service detail:', error);
-        toast.error('No se pudo cargar el detalle del servicio');
+      console.error('Error fetching service detail:', error);
+      toast.error('No se pudo cargar el detalle del servicio');
     }
   };
 
   const getRoleName = (role: string = '') => {
     const roles: Record<string, string> = {
-        admin: 'Administrador',
-        dispatcher: 'Despachador',
-        driver: 'Conductor',
-        general_manager: 'Gerente General',
-        operations_manager: 'Gerente de Operaciones',
-        sales: 'Ventas'
+      admin: 'Administrador',
+      dispatcher: 'Despachador',
+      driver: 'Conductor',
+      general_manager: 'Gerente General',
+      operations_manager: 'Gerente de Operaciones',
+      sales: 'Ventas'
     };
     return roles[role] || role;
   };
@@ -78,7 +100,7 @@ export default function PendingStartServicesPage() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Servicios Pendientes de Inicio</h1>
                 <p className="text-sm text-gray-600 mt-1">
-                    {loading ? 'Cargando...' : `${services.length} servicios esperando inicio`}
+                  {loading ? 'Cargando...' : `${services.length} servicios esperando inicio`}
                 </p>
               </div>
             </div>
@@ -104,38 +126,45 @@ export default function PendingStartServicesPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
-             <div className="flex justify-center p-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-             </div>
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
         ) : services.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {services.map(service => (
-                    <ServiceCard 
-                        key={service.id} 
-                        service={service} 
-                        variant="pending_start" 
-                        onAction={canModify ? handleStartService : undefined}
-                        onViewDetail={handleViewDetail}
-                    />
-                ))}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {services.map(service => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                variant="pending_start"
+                onAction={canModify ? handleStartService : undefined}
+                onViewDetail={handleViewDetail}
+              />
+            ))}
+          </div>
         ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                <div className="max-w-md mx-auto">
-                    <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Timer className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay servicios pendientes de inicio</h3>
-                    <p className="text-gray-600">Todos los servicios asignados han sido iniciados.</p>
-                </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Timer className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay servicios pendientes de inicio</h3>
+              <p className="text-gray-600">Todos los servicios asignados han sido iniciados.</p>
             </div>
+          </div>
         )}
       </main>
 
-      <ServiceDetailModal 
+      <ServiceDetailModal
         isOpen={!!selectedService}
         onClose={() => setSelectedService(null)}
         service={selectedService}
+      />
+
+      <StartServiceModal
+        isOpen={!!startingService}
+        onClose={() => setStartingService(null)}
+        service={startingService}
+        onConfirm={handleStartSubmit}
       />
     </div>
   );
