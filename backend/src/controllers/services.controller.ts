@@ -233,38 +233,30 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
         if (!force) {
             const warnings: string[] = [];
 
-            const dateConflictSql = `
-                SELECT id FROM services 
-                WHERE tentative_date = $1 
-                AND id != $2 
-                AND status_id NOT IN (SELECT id FROM service_statuses WHERE name IN ('cancelled', 'completed')) 
-                AND (driver_id = $3 OR tractor_id = $4 OR trailer_id = $5)
+            const busyResourceSql = `
+                SELECT s.id, ss.name as status_name 
+                FROM services s
+                JOIN service_statuses ss ON s.status_id = ss.id
+                WHERE ss.name IN ('pending_start', 'in_progress')
+                AND s.id != $1
+                AND (s.driver_id = $2 OR s.tractor_id = $3 OR s.trailer_id = $4)
             `;
-            const dateConflicts = await query<{ id: number }>(dateConflictSql, [serviceDate, id, driverId, tractorId, trailerId]);
 
-            if (dateConflicts.rows.length > 0) {
-                const conflictIds = dateConflicts.rows.map(row => `#${row.id}`).join(', ');
-                warnings.push(`Agenda: Recursos ya programados en los servicios: ${conflictIds} para esta fecha.`);
-            }
+            const conflicts = await query<{ id: number, status_name: string }>(busyResourceSql, [id, driverId, tractorId, trailerId]);
 
-            const activeRouteSql = `
-                SELECT id FROM services 
-                WHERE status_id = (SELECT id FROM service_statuses WHERE name = 'in_progress')
-                AND id != $1
-                AND (driver_id = $2 OR tractor_id = $3 OR trailer_id = $4)
-            `;
-            const routeConflicts = await query<{ id: number }>(activeRouteSql, [id, driverId, tractorId, trailerId]);
-
-            if (routeConflicts.rows.length > 0) {
-                const conflictIds = routeConflicts.rows.map(row => `#${row.id}`).join(', ');
-                warnings.push(`Operativo: Uno de los recursos está ACTUALMENTE EN RUTA en el Servicio ${conflictIds}.`);
+            if (conflicts.rows.length > 0) {
+                const conflictDetails = conflicts.rows.map(row => {
+                    const statusLabel = row.status_name === 'in_progress' ? 'EN RUTA' : 'ASIGNADO';
+                    return `#${row.id} (${statusLabel})`;
+                }).join(', ');
+                warnings.push(`Uno o más recursos ya están comprometidos en: ${conflictDetails}.`);
             }
 
             if (warnings.length > 0) {
                 await query('ROLLBACK');
                 res.status(409).json({
                     status: 'WARNING',
-                    message: `Conflictos detectados:\n- ${warnings.join('\n- ')}\n¿Desea continuar?`
+                    message: `Conflictos detectados:\n- ${warnings.join('\n- ')}\n¿Desea continuar de todos modos?`
                 });
                 return;
             }
