@@ -69,7 +69,7 @@ export const createService = async (req: Request<{}, {}, CreateServiceRequest>, 
 };
 
 export const getServices = async (req: Request, res: Response<Service[] | ErrorResponse>): Promise<void> => {
-    const { status, clientId, date } = req.query;
+    const { status, clientId, date, search, limit, offset, sort } = req.query;
 
     try {
         let sql = `
@@ -82,6 +82,7 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
                 s.weight, s.length, s.width, s.height, s.observations,
                 s.operational_notes,
                 s.start_date_time, s.end_date_time,
+                s.created_at, s.updated_at,
                 s.price,
                 s.currency_id, cur.code as currency_code,
                 
@@ -121,11 +122,42 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
             params.push(date);
             paramIndex++;
         }
+        if (search) {
+            const searchTerm = `%${search}%`;
+            sql += ` AND (
+                s.id::text ILIKE $${paramIndex} OR 
+                c.name ILIKE $${paramIndex} OR 
+                s.origin ILIKE $${paramIndex} OR 
+                s.destination ILIKE $${paramIndex}
+            )`;
+            params.push(searchTerm);
+            paramIndex++;
+        }
 
-        sql += ` ORDER BY s.tentative_date ASC, s.created_at ASC`;
+        // Sorting
+        if (sort === 'recent') {
+            sql += ` ORDER BY s.updated_at DESC`;
+        } else {
+            sql += ` ORDER BY s.tentative_date ASC, s.created_at ASC`;
+        }
+
+        // Pagination
+        if (limit) {
+            sql += ` LIMIT $${paramIndex}`;
+            params.push(parseInt(limit as string));
+            paramIndex++;
+        }
+        if (offset) {
+            sql += ` OFFSET $${paramIndex}`;
+            params.push(parseInt(offset as string));
+            paramIndex++;
+        }
+
         const result = await query<Service>(sql, params);
+
         const userRole = (req as AuthenticatedRequest).user?.role;
         const financialRoles = ['admin', 'general_manager', 'sales', 'operations_manager'];
+
         const services: Service[] = result.rows.map(service => {
             if (!financialRoles.includes(userRole || '')) {
                 const { price, currency_id, currency_code, ...safeService } = service;
@@ -133,6 +165,7 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
             }
             return service;
         });
+
         res.status(200).json(services);
     } catch (error: unknown) {
         console.error(`Get Services Error: ${error}`);
