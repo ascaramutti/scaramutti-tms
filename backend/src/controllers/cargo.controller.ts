@@ -26,8 +26,13 @@ export const createCargoType = async (req: Request<{}, {}, CargoTypeRequest>, re
     const { name, description, standardWeight, standardLength, standardWidth, standardHeight } = req.body;
 
     try {
-        if(!name) {
+        if (!name) {
             res.status(400).json({ status: 'ERROR', message: 'Name is required' });
+            return;
+        }
+
+        if (!standardWeight || standardWeight <= 0) {
+            res.status(400).json({ status: 'ERROR', message: 'Standard weight is required and must be greater than 0' });
             return;
         }
 
@@ -39,9 +44,9 @@ export const createCargoType = async (req: Request<{}, {}, CargoTypeRequest>, re
         `;
 
         const values = [
-            name.toUpperCase(), 
+            name.toUpperCase(),
             description || null,
-            standardWeight || null,
+            standardWeight,
             standardLength || null,
             standardWidth || null,
             standardHeight || null

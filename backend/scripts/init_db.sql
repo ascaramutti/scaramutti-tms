@@ -135,7 +135,7 @@ CREATE TABLE cargo_types (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
-    standard_weight DECIMAL(10, 2),
+    standard_weight DECIMAL(10, 2) NOT NULL,
     standard_length DECIMAL(10, 2),
     standard_width DECIMAL(10, 2),
     standard_height DECIMAL(10, 2),
