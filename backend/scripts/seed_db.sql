@@ -28,16 +28,21 @@ INSERT INTO resource_statuses (name, description) VALUES
 ('maintenance', 'En taller o revisión mecánica'),
 ('not_available', 'Baja temporal, descanso médico o vacaciones');
 
+-- 4.5. TIPOS DE DOCUMENTO
+INSERT INTO document_types (code, name, description, max_length, validation_pattern) VALUES
+('DNI', 'Documento Nacional de Identidad', 'DNI peruano de 8 dígitos', 8, '^[0-9]{8}$'),
+('CE', 'Carnet de Extranjería', 'CE con formato: 3 letras + 9 dígitos', 12, '^[A-Z]{3}[0-9]{9}$');
+
 -- 5. WORKERS (Staff Completo)
-INSERT INTO workers (first_name, last_name, dni, position) VALUES 
-('Angel', 'Scaramutti', '00000001', 'Gerente General'), -- ID 1
-('Maria', 'Ventas', '10101010', 'Ejecutiva de Ventas'), -- ID 2
-('Juan', 'Dispatcher', '20202020', 'Coordinador de Flota'), -- ID 3
-('Pedro', 'Operaciones', '30303030', 'Gerente de Operaciones'), -- ID 4
-('Carlos', 'Sistemas', '40404040', 'Administrador IT'), -- ID 5
-('Luis', 'Chofer A', '50505050', 'Conductor'), -- ID 6
-('Jose', 'Chofer B', '60606060', 'Conductor'), -- ID 7
-('Miguel', 'Chofer C', '70707070', 'Conductor'); -- ID 8
+INSERT INTO workers (first_name, last_name, document_type_id, document_number, position) VALUES 
+('Angel', 'Scaramutti', 1, '00000001', 'Gerente General'), -- ID 1, DNI
+('Maria', 'Ventas', 1, '10101010', 'Ejecutiva de Ventas'), -- ID 2, DNI
+('Juan', 'Dispatcher', 1, '20202020', 'Coordinador de Flota'), -- ID 3, DNI
+('Pedro', 'Operaciones', 1, '30303030', 'Gerente de Operaciones'), -- ID 4, DNI
+('Carlos', 'Sistemas', 1, '40404040', 'Administrador IT'), -- ID 5, DNI
+('Luis', 'Chofer A', 1, '50505050', 'Conductor'), -- ID 6, DNI
+('Jose', 'Chofer B', 2, 'ABC123456789', 'Conductor'), -- ID 7, CE (extranjero)
+('Miguel', 'Chofer C', 1, '70707070', 'Conductor'); -- ID 8, DNI
 
 -- 6. USERS (Usuarios del Sistema - Roles asignados)
 -- Password '123456' hasheado: $2b$10$3euPcmQFCib0Yf/u.wndu.g5qQYd7j54c4e9.18Yw1.1

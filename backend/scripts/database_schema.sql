@@ -38,12 +38,25 @@ CREATE TABLE resource_statuses (
     is_active BOOLEAN DEFAULT TRUE
 );
 
+-- Tipos de Documento
+CREATE TABLE document_types (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(10) UNIQUE NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    description TEXT,
+    max_length INT NOT NULL,
+    validation_pattern VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 2. WORKERS (Recursos Humanos)
 CREATE TABLE workers (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    dni VARCHAR(8) UNIQUE NOT NULL,
+    document_type_id INT NOT NULL REFERENCES document_types(id),
+    document_number VARCHAR(20) UNIQUE NOT NULL,
     phone VARCHAR(9),
     position VARCHAR(100),
     is_active BOOLEAN DEFAULT TRUE,
