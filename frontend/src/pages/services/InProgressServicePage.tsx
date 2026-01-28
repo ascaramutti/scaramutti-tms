@@ -29,8 +29,8 @@ export default function InProgressServicesPage() {
   const loadServices = async () => {
     try {
       setLoading(true);
-      const data = await servicesService.getServices({ status: 'in_progress' });
-      setServices(data);
+      const { services } = await servicesService.getServices({ status: 'in_progress' });
+      setServices(services);
     } catch (error) {
       console.error('Error loading in progress services:', error);
       toast.error('No se pudieron cargar los servicios en ejecución');

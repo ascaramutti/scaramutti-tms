@@ -28,8 +28,8 @@ export default function PendingServicesPage() {
   const loadServices = async () => {
     try {
       setLoading(true);
-      const data = await servicesService.getServices({ status: 'pending_assignment' });
-      setServices(data);
+      const { services } = await servicesService.getServices({ status: 'pending_assignment' });
+      setServices(services);
     } catch (error) {
       console.error('Error loading pending services:', error);
       toast.error('No se pudieron cargar los servicios pendientes');

@@ -27,8 +27,8 @@ export default function PendingStartServicesPage() {
   const loadServices = async () => {
     try {
       setLoading(true);
-      const data = await servicesService.getServices({ status: 'pending_start' });
-      setServices(data);
+      const { services } = await servicesService.getServices({ status: 'pending_start' });
+      setServices(services);
     } catch (error) {
       console.error('Error loading pending start services:', error);
       toast.error('No se pudieron cargar los servicios pendientes de inicio');
