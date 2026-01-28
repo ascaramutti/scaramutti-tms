@@ -1,4 +1,4 @@
-import { X, MapPin, Calendar, User, Truck, DollarSign, Package, AlertCircle, FileText } from 'lucide-react';
+import { X, MapPin, Calendar, User, Truck, DollarSign, Package, AlertCircle, FileText, Clock } from 'lucide-react';
 import type { Service } from '../../interfaces/services.interface';
 
 interface ServiceDetailModalProps {
@@ -164,11 +164,20 @@ export function ServiceDetailModal({ isOpen, onClose, service }: ServiceDetailMo
                         <div>
                             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Detalles Operativos</h3>
                             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                                {service.status_name === 'in_progress' && service.start_date_time ? (
+                                <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-4 h-4 text-gray-400" />
+                                            <span className="text-sm text-gray-500">Fecha Tentativa</span>
+                                        </div>
+                                        <span className="font-medium text-gray-900">
+                                            {new Date(service.tentative_date).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                {service.start_date_time && (
                                     <div className="flex items-center justify-between p-2 -mx-2 bg-emerald-50 rounded-lg border border-emerald-100 mb-2">
                                         <div className="flex items-center gap-2">
                                             <Calendar className="w-4 h-4 text-emerald-600" />
-                                            <span className="text-sm font-medium text-emerald-900">Fecha Inicio</span>
+                                            <span className="text-sm font-medium text-emerald-900">Inicio Real</span>
                                         </div>
                                         <div className="text-right">
                                             <p className="font-bold text-emerald-700 text-sm">
@@ -179,15 +188,22 @@ export function ServiceDetailModal({ isOpen, onClose, service }: ServiceDetailMo
                                             </p>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="flex items-center justify-between mb-2">
+                                )}
+
+                                {service.end_date_time && (
+                                    <div className="flex items-center justify-between p-2 -mx-2 bg-blue-50 rounded-lg border border-blue-100 mb-2">
                                         <div className="flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm text-gray-500">Fecha Tentativa</span>
+                                            <Clock className="w-4 h-4 text-blue-600" />
+                                            <span className="text-sm font-medium text-blue-900">Cierre Real</span>
                                         </div>
-                                        <span className="font-medium text-gray-900">
-                                            {new Date(service.tentative_date).toLocaleDateString()}
-                                        </span>
+                                        <div className="text-right">
+                                            <p className="font-bold text-blue-700 text-sm">
+                                                {new Date(service.end_date_time).toLocaleDateString()}
+                                            </p>
+                                            <p className="text-xs text-blue-600">
+                                                {new Date(service.end_date_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
                                     </div>
                                 )}
 

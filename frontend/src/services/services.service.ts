@@ -2,11 +2,15 @@ import api from './api';
 import type { Service, CreateServiceRequest, ChangeStatusPayload, AssignResourcesPayload } from '../interfaces/services.interface';
 
 export const servicesService = {
-    getServices: async (filters?: { status?: string; date?: string; clientId?: number }): Promise<Service[]> => {
+    getServices: async (filters?: { status?: string; date?: string; clientId?: number; search?: string; limit?: number; offset?: number; sort?: 'recent' }): Promise<Service[]> => {
         const params = new URLSearchParams();
         if (filters?.status) params.append('status', filters.status);
         if (filters?.date) params.append('date', filters.date);
         if (filters?.clientId) params.append('clientId', filters.clientId.toString());
+        if (filters?.search) params.append('search', filters.search);
+        if (filters?.limit) params.append('limit', filters.limit.toString());
+        if (filters?.offset !== undefined) params.append('offset', filters.offset.toString());
+        if (filters?.sort) params.append('sort', filters.sort);
 
         const response = await api.get<Service[]>('/services', { params });
         return response.data;

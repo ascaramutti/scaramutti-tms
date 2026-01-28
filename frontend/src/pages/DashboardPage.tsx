@@ -1,17 +1,66 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { LogOut, User as UserIcon, Plus, AlertCircle, RefreshCw } from "lucide-react"; 
+import { LogOut, User as UserIcon, Plus, AlertCircle, RefreshCw, Search, ChevronRight } from "lucide-react";
 import { dashboardService } from "../services/dashboard.service";
+import { servicesService } from "../services/services.service";
 import { StatsCards } from "../components/dashboard/StatsCards";
+import { ServiceDetailModal } from "../components/services/ServiceDetailModal";
 import type { DashboardStats } from "../interfaces/dashboard.interface";
+import type { Service } from "../interfaces/services.interface";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function DashboardPage() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null); 
+    const [error, setError] = useState<string | null>(null);
+
+    // Search & Recent Activity State
+    const [recentServices, setRecentServices] = useState<Service[]>([]);
+    const [selectedService, setSelectedService] = useState<Service | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            loadRecentActivity();
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, page]);
+
+    const loadRecentActivity = async () => {
+        try {
+            const data = await servicesService.getServices({
+                limit: 10,
+                sort: 'recent',
+                search: searchTerm,
+                offset: (page - 1) * 10
+            });
+            setRecentServices(data);
+        } catch (error) {
+            console.error('Error loading recent activity:', error);
+            toast.error('Error al cargar actividad reciente');
+        }
+    };
+
+    const handleSearch = (term: string) => {
+        setSearchTerm(term);
+        setPage(1); // Reset to first page on search
+    };
+
+    const getStatusLabel = (status: string) => {
+        const labels: Record<string, string> = {
+            pending_assignment: 'Pendiente Asignación',
+            pending_start: 'Pendiente Inicio',
+            in_progress: 'En Ruta',
+            completed: 'Completado',
+            cancelled: 'Cancelado'
+        };
+        return labels[status] || status;
+    };
 
     const fetchStats = async () => {
         try {
@@ -79,13 +128,14 @@ export function DashboardPage() {
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+                {/* 1. Header del Dashboard y Botones */}
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h2 className="text-xl font-bold text-gray-900">Resumen General</h2>
                         <p className="text-sm text-gray-600 mt-1">Estadísticas del área de operaciones</p>
                     </div>
-                    
-                    {/* Botón visible para todos EXCEPTO dispatcher */}
+
                     {user?.role !== 'dispatcher' && (
                         <button
                             onClick={() => handleNavigate('/create-service')}
@@ -97,13 +147,13 @@ export function DashboardPage() {
                     )}
                 </div>
 
-                {/* MANEJO DE ESTADOS: ERROR, CARGANDO, O DATOS */}
+                {/* 2. Tarjetas de Estadísticas (KPIs) */}
                 {error ? (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
                         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
                         <h3 className="text-lg font-medium text-red-900 mb-2">Error de conexión</h3>
                         <p className="text-red-600 mb-4">{error}</p>
-                        <button 
+                        <button
                             onClick={fetchStats}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
                         >
@@ -112,17 +162,135 @@ export function DashboardPage() {
                         </button>
                     </div>
                 ) : (
-                    <StatsCards 
-                        stats={stats} 
+                    <StatsCards
+                        stats={stats}
                         isLoading={loading}
                         onNavigate={handleNavigate}
                     />
                 )}
 
-                {/* Grid para las listas futuras */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                    {/* Aquí irán ServicesList, DriversList, etc. */}
+                {/* Separador Visual */}
+                <div className="my-8 border-t border-gray-200"></div>
+
+                {/* 3. Sección de Búsqueda y Lista */}
+                <div className="space-y-6">
+
+                    {/* Buscador Contextual */}
+                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900">Servicios</h2>
+                            <p className="text-sm text-gray-600 mt-1">Se muestran los 10 servicios mas recientes</p>
+                        </div>
+                        <div className="relative w-full md:w-96">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Buscar ID, Cliente, Ruta..."
+                                className="block w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                onChange={(e) => handleSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Tabla de Resultados / Actividad Reciente */}
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ruta</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Est.</th>
+                                        <th scope="col" className="relative px-6 py-3">
+                                            <span className="sr-only">Ver</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {recentServices.length > 0 ? (
+                                        recentServices.map((service) => (
+                                            <tr
+                                                key={service.id}
+                                                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                                onClick={() => setSelectedService(service)}
+                                            >
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                    #{service.id}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-medium text-gray-900">{service.client_name}</div>
+                                                    <div className="text-xs text-gray-500">{service.client_ruc}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center text-sm text-gray-500">
+                                                        <span className="font-medium text-gray-900">{service.origin}</span>
+                                                        <span className="mx-1">→</span>
+                                                        <span className="font-medium text-gray-900">{service.destination}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                        ${service.status_name === 'pending_assignment' ? 'bg-yellow-100 text-yellow-800' :
+                                                            service.status_name === 'pending_start' ? 'bg-orange-100 text-orange-800' :
+                                                                service.status_name === 'in_progress' ? 'bg-emerald-100 text-emerald-800' :
+                                                                    service.status_name === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                                                        service.status_name === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                                                            'bg-gray-100 text-gray-800'}`}>
+                                                        {getStatusLabel(service.status_name)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {new Date(service.tentative_date).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                                {searchTerm ? 'No se encontraron servicios' : 'No hay actividad reciente'}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination Footer */}
+                        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                            <span className="text-sm text-gray-700">
+                                Mostrando página <span className="font-semibold text-gray-900">{page}</span>
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                                >
+                                    Anterior
+                                </button>
+                                <button
+                                    onClick={() => setPage(p => p + 1)}
+                                    disabled={recentServices.length < 10}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                                >
+                                    Siguiente
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                <ServiceDetailModal
+                    isOpen={!!selectedService}
+                    onClose={() => setSelectedService(null)}
+                    service={selectedService}
+                />
             </main>
         </div>
     );
