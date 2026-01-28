@@ -22,6 +22,9 @@ export function DashboardPage() {
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(1);
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [isLoadingServices, setIsLoadingServices] = useState(false);
+    const [totalServices, setTotalServices] = useState<number>(0);
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
@@ -29,26 +32,36 @@ export function DashboardPage() {
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, page]);
+    }, [searchTerm, page, statusFilter]);
 
     const loadRecentActivity = async () => {
         try {
-            const data = await servicesService.getServices({
+            setIsLoadingServices(true);
+            const { services, total } = await servicesService.getServices({
                 limit: 10,
                 sort: 'recent',
                 search: searchTerm,
-                offset: (page - 1) * 10
+                offset: (page - 1) * 10,
+                ...(statusFilter !== 'all' && { status: statusFilter })
             });
-            setRecentServices(data);
+            setRecentServices(services);
+            setTotalServices(total);
         } catch (error) {
             console.error('Error loading recent activity:', error);
             toast.error('Error al cargar actividad reciente');
+        } finally {
+            setIsLoadingServices(false);
         }
     };
 
     const handleSearch = (term: string) => {
         setSearchTerm(term);
         setPage(1); // Reset to first page on search
+    };
+
+    const handleStatusFilter = (status: string) => {
+        setStatusFilter(status);
+        setPage(1); // Reset to first page on filter change
     };
 
     const getStatusLabel = (status: string) => {
@@ -172,14 +185,14 @@ export function DashboardPage() {
                 {/* Separador Visual */}
                 <div className="my-8 border-t border-gray-200"></div>
 
-                {/* 3. Sección de Búsqueda y Lista */}
+                {/* 3. Sección de Búsqueda y Lista - MEJORADA */}
                 <div className="space-y-6">
 
-                    {/* Buscador Contextual */}
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                    {/* Header con Búsqueda */}
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">Servicios</h2>
-                            <p className="text-sm text-gray-600 mt-1">Se muestran los 10 servicios mas recientes</p>
+                            <p className="text-sm text-gray-600 mt-1">Se muestran los servicios desde el más reciente</p>
                         </div>
                         <div className="relative w-full md:w-96">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -190,11 +203,70 @@ export function DashboardPage() {
                                 placeholder="Buscar ID, Cliente, Ruta..."
                                 className="block w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                 onChange={(e) => handleSearch(e.target.value)}
+                                value={searchTerm}
                             />
                         </div>
                     </div>
 
-                    {/* Tabla de Resultados / Actividad Reciente */}
+                    {/* Filtros por Estado */}
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => handleStatusFilter('all')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${statusFilter === 'all'
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                }`}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            onClick={() => handleStatusFilter('pending_assignment')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${statusFilter === 'pending_assignment'
+                                ? 'bg-yellow-500 text-white shadow-md'
+                                : 'bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100'
+                                }`}
+                        >
+                            Pendiente Asignación
+                        </button>
+                        <button
+                            onClick={() => handleStatusFilter('pending_start')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${statusFilter === 'pending_start'
+                                ? 'bg-orange-500 text-white shadow-md'
+                                : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'
+                                }`}
+                        >
+                            Pendiente Inicio
+                        </button>
+                        <button
+                            onClick={() => handleStatusFilter('in_progress')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${statusFilter === 'in_progress'
+                                ? 'bg-emerald-500 text-white shadow-md'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                }`}
+                        >
+                            En Ruta
+                        </button>
+                        <button
+                            onClick={() => handleStatusFilter('completed')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${statusFilter === 'completed'
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                                }`}
+                        >
+                            Completado
+                        </button>
+                        <button
+                            onClick={() => handleStatusFilter('cancelled')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${statusFilter === 'cancelled'
+                                ? 'bg-red-500 text-white shadow-md'
+                                : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                                }`}
+                        >
+                            Cancelado
+                        </button>
+                    </div>
+
+                    {/* Tabla de Resultados con Loading State */}
                     <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
@@ -211,7 +283,16 @@ export function DashboardPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {recentServices.length > 0 ? (
+                                    {isLoadingServices ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+                                                    <p className="text-sm text-gray-500">Cargando servicios...</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : recentServices.length > 0 ? (
                                         recentServices.map((service) => (
                                             <tr
                                                 key={service.id}
@@ -254,7 +335,9 @@ export function DashboardPage() {
                                     ) : (
                                         <tr>
                                             <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                                                {searchTerm ? 'No se encontraron servicios' : 'No hay actividad reciente'}
+                                                {searchTerm || statusFilter !== 'all'
+                                                    ? 'No se encontraron servicios con los filtros aplicados'
+                                                    : 'No hay actividad reciente'}
                                             </td>
                                         </tr>
                                     )}
@@ -265,7 +348,14 @@ export function DashboardPage() {
                         {/* Pagination Footer */}
                         <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                             <span className="text-sm text-gray-700">
-                                Mostrando página <span className="font-semibold text-gray-900">{page}</span>
+                                {recentServices.length > 0 ? (
+                                    <>
+                                        Mostrando <span className="font-semibold text-gray-900">{(page - 1) * 10 + 1}-{(page - 1) * 10 + recentServices.length}</span> de{' '}
+                                        <span className="font-semibold text-gray-900">{totalServices}</span> servicios
+                                    </>
+                                ) : (
+                                    'No hay servicios para mostrar'
+                                )}
                             </span>
                             <div className="flex gap-2">
                                 <button

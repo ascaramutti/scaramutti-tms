@@ -68,10 +68,54 @@ export const createService = async (req: Request<{}, {}, CreateServiceRequest>, 
     }
 };
 
-export const getServices = async (req: Request, res: Response<Service[] | ErrorResponse>): Promise<void> => {
+export const getServices = async (req: Request, res: Response): Promise<void> => {
     const { status, clientId, date, search, limit, offset, sort } = req.query;
 
     try {
+        // Build WHERE clause for both queries
+        let whereClause = 'WHERE 1=1';
+        const params: any[] = [];
+        let paramIndex = 1;
+
+        if (status) {
+            whereClause += ` AND ss.name = $${paramIndex}`;
+            params.push(status);
+            paramIndex++;
+        }
+        if (clientId) {
+            whereClause += ` AND s.client_id = $${paramIndex}`;
+            params.push(clientId);
+            paramIndex++;
+        }
+        if (date) {
+            whereClause += ` AND s.tentative_date = $${paramIndex}`;
+            params.push(date);
+            paramIndex++;
+        }
+        if (search) {
+            const searchTerm = `%${search}%`;
+            whereClause += ` AND (
+                s.id::text ILIKE $${paramIndex} OR 
+                c.name ILIKE $${paramIndex} OR 
+                s.origin ILIKE $${paramIndex} OR 
+                s.destination ILIKE $${paramIndex}
+            )`;
+            params.push(searchTerm);
+            paramIndex++;
+        }
+
+        // First, get the total count
+        const countSql = `
+            SELECT COUNT(*) as total
+            FROM services s
+            JOIN clients c ON s.client_id = c.id
+            JOIN service_statuses ss ON s.status_id = ss.id
+            ${whereClause}
+        `;
+        const countResult = await query<{ total: string }>(countSql, params);
+        const total = parseInt(countResult.rows[0]?.total || '0');
+
+        // Then get the paginated services
         let sql = `
             SELECT 
                 s.id,
@@ -102,37 +146,8 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
             LEFT JOIN tractors tr ON s.tractor_id = tr.id
             LEFT JOIN trailers tl ON s.trailer_id = tl.id
             
-            WHERE 1=1
+            ${whereClause}
         `;
-        const params: any[] = [];
-        let paramIndex = 1;
-
-        if (status) {
-            sql += ` AND ss.name = $${paramIndex}`;
-            params.push(status);
-            paramIndex++;
-        }
-        if (clientId) {
-            sql += ` AND s.client_id = $${paramIndex}`;
-            params.push(clientId);
-            paramIndex++;
-        }
-        if (date) {
-            sql += ` AND s.tentative_date = $${paramIndex}`;
-            params.push(date);
-            paramIndex++;
-        }
-        if (search) {
-            const searchTerm = `%${search}%`;
-            sql += ` AND (
-                s.id::text ILIKE $${paramIndex} OR 
-                c.name ILIKE $${paramIndex} OR 
-                s.origin ILIKE $${paramIndex} OR 
-                s.destination ILIKE $${paramIndex}
-            )`;
-            params.push(searchTerm);
-            paramIndex++;
-        }
 
         // Sorting
         if (sort === 'recent') {
@@ -166,7 +181,8 @@ export const getServices = async (req: Request, res: Response<Service[] | ErrorR
             return service;
         });
 
-        res.status(200).json(services);
+        // Return both services and total count
+        res.status(200).json({ services, total });
     } catch (error: unknown) {
         console.error(`Get Services Error: ${error}`);
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });

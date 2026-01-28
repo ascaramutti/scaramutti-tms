@@ -2,7 +2,7 @@ import api from './api';
 import type { Service, CreateServiceRequest, ChangeStatusPayload, AssignResourcesPayload } from '../interfaces/services.interface';
 
 export const servicesService = {
-    getServices: async (filters?: { status?: string; date?: string; clientId?: number; search?: string; limit?: number; offset?: number; sort?: 'recent' }): Promise<Service[]> => {
+    getServices: async (filters?: { status?: string; date?: string; clientId?: number; search?: string; limit?: number; offset?: number; sort?: 'recent' }): Promise<{ services: Service[]; total: number }> => {
         const params = new URLSearchParams();
         if (filters?.status) params.append('status', filters.status);
         if (filters?.date) params.append('date', filters.date);
@@ -12,7 +12,7 @@ export const servicesService = {
         if (filters?.offset !== undefined) params.append('offset', filters.offset.toString());
         if (filters?.sort) params.append('sort', filters.sort);
 
-        const response = await api.get<Service[]>('/services', { params });
+        const response = await api.get<{ services: Service[]; total: number }>('/services', { params });
         return response.data;
     },
     createService: async (data: CreateServiceRequest): Promise<Service> => {
