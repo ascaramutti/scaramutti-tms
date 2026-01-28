@@ -39,38 +39,38 @@ export function CreateCargoModal({ isOpen, onClose, onCargoCreated, initialName 
     e.preventDefault();
     const weightVal = parseFloat(formData.standardWeight);
     if (!formData.name || isNaN(weightVal) || weightVal <= 0) {
-        toast.error('Nombre y peso estándar son obligatorios');
-        return;
+      toast.error('Nombre y peso estándar son obligatorios');
+      return;
     }
 
     try {
-        setLoading(true);
-        const newCargo = await cargoService.createCargoType({
-            name: formData.name,
-            description: formData.description,
-            standard_length: formData.standardLength ? parseFloat(formData.standardLength) : undefined,
-            standard_width: formData.standardWidth ? parseFloat(formData.standardWidth) : undefined,
-            standard_height: formData.standardHeight ? parseFloat(formData.standardHeight) : undefined,
-            standard_weight: formData.standardWeight ? parseFloat(formData.standardWeight) : undefined,
-        });
-        onCargoCreated(newCargo);
-        toast.success('Tipo de carga creado exitosamente');
-        
-        // Reset
-        setFormData({
-            name: '', description: '',
-            standardLength: '', standardWidth: '', standardHeight: '', standardWeight: ''
-        });
-        onClose();
+      setLoading(true);
+      const newCargo = await cargoService.createCargoType({
+        name: formData.name,
+        description: formData.description,
+        standard_length: formData.standardLength ? parseFloat(formData.standardLength) : undefined,
+        standard_width: formData.standardWidth ? parseFloat(formData.standardWidth) : undefined,
+        standard_height: formData.standardHeight ? parseFloat(formData.standardHeight) : undefined,
+        standard_weight: parseFloat(formData.standardWeight),
+      });
+      onCargoCreated(newCargo);
+      toast.success('Tipo de carga creado exitosamente');
+
+      // Reset
+      setFormData({
+        name: '', description: '',
+        standardLength: '', standardWidth: '', standardHeight: '', standardWeight: ''
+      });
+      onClose();
     } catch (error: any) {
-        console.error(error);
-        if (error.response?.status === 409) {
-            toast.error('Ya existe un tipo de carga con ese nombre');
-        } else {
-            toast.error('Error al crear tipo de carga');
-        }
+      console.error(error);
+      if (error.response?.status === 409) {
+        toast.error('Ya existe un tipo de carga con ese nombre');
+      } else {
+        toast.error('Error al crear tipo de carga');
+      }
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -139,29 +139,29 @@ export function CreateCargoModal({ isOpen, onClose, onCargoCreated, initialName 
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Largo (m)</label>
-                <input 
-                    type="number" step="0.01" min="0" 
-                    name="standardLength" value={formData.standardLength} onChange={handleInputChange}
-                    placeholder="0.00"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" 
+                <input
+                  type="number" step="0.01" min="0"
+                  name="standardLength" value={formData.standardLength} onChange={handleInputChange}
+                  placeholder="0.00"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ancho (m)</label>
-                <input 
-                    type="number" step="0.01" min="0"
-                    name="standardWidth" value={formData.standardWidth} onChange={handleInputChange}
-                    placeholder="0.00"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" 
+                <input
+                  type="number" step="0.01" min="0"
+                  name="standardWidth" value={formData.standardWidth} onChange={handleInputChange}
+                  placeholder="0.00"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Alto (m)</label>
-                <input 
-                    type="number" step="0.01" min="0"
-                    name="standardHeight" value={formData.standardHeight} onChange={handleInputChange} 
-                    placeholder="0.00"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" 
+                <input
+                  type="number" step="0.01" min="0"
+                  name="standardHeight" value={formData.standardHeight} onChange={handleInputChange}
+                  placeholder="0.00"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
               </div>
             </div>
@@ -169,7 +169,7 @@ export function CreateCargoModal({ isOpen, onClose, onCargoCreated, initialName 
 
           {/* Peso */}
           <div className="space-y-4">
-             <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
               <Weight className="w-4 h-4" /> Peso Estándar
             </h3>
             <div>
@@ -178,12 +178,12 @@ export function CreateCargoModal({ isOpen, onClose, onCargoCreated, initialName 
               </label>
               <div className="relative">
                 <Weight className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input 
-                    type="number" step="0.1" min="0"
-                    id="standardWeight"
-                    name="standardWeight" value={formData.standardWeight} onChange={handleInputChange}
-                    placeholder="0.00"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" 
+                <input
+                  type="number" step="0.1" min="0"
+                  id="standardWeight"
+                  name="standardWeight" value={formData.standardWeight} onChange={handleInputChange}
+                  placeholder="0.00"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
               </div>
             </div>
