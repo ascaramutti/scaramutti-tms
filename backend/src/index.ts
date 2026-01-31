@@ -18,6 +18,9 @@ import serviceTypesRouter from './routes/service-types.route';
 
 dotenv.config();
 
+const APP_VERSION = process.env.APP_VERSION || 'v0.0.0';
+const DEPLOY_DATE = process.env.DEPLOY_DATE || new Date().toISOString();
+
 const app: Application = express();
 const PORT = process.env.PORT;
 
@@ -29,12 +32,18 @@ app.get('/api/health', async (req: Request, res: Response<HealthResponse | Error
         const result = await query('SELECT NOW()');
         res.json({
             status: 'OK',
-            message: 'Backend running successfuly',
+            version: APP_VERSION,
+            deployed_at: DEPLOY_DATE,
+            message: 'Backend running successfully',
             db_time: result.rows[0].now
         });
     } catch (error: unknown) {
         console.error(`Database connection ${error}`);
-        res.status(500).json({ status: 'ERROR', message: 'Database connection failed' });
+        res.status(500).json({ 
+            status: 'ERROR', 
+            version: APP_VERSION,
+            message: 'Database connection failed' 
+        });
     }
 });
 
