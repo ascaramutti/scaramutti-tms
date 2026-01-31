@@ -9,20 +9,18 @@ services:
   # ==========================================
   db:
     image: postgres:16-alpine
-    container_name: tms-db-prod
+    container_name: scaramutti-tms-db-prod
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_DB: ${DB_NAME:-scaramutti_tms_prod}
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
-      # Scripts de inicialización (ejecutados solo si el volumen está vacío)
-      - ./backend/scripts:/docker-entrypoint-initdb.d:ro
+      - scaramutti_tms_db_prod_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME:-scaramutti_tms_prod}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,7 +37,7 @@ services:
     build:
       context: ./backend
       target: production
-    container_name: tms-backend-prod
+    container_name: scaramutti-tms-backend-prod
     restart: always
     environment:
       NODE_ENV: production
@@ -47,7 +45,7 @@ services:
       DB_HOST: db
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
+      DB_NAME: ${DB_NAME:-scaramutti_tms_prod}
       DB_PORT: 5432
       JWT_SECRET: ${JWT_SECRET}
       # Variables de versionado
@@ -79,7 +77,7 @@ services:
       target: production
       args:
         VITE_API_URL: ${VITE_API_URL}
-    container_name: tms-frontend-prod
+    container_name: scaramutti-tms-frontend-prod
     restart: always
     ports:
       - "80:80"
