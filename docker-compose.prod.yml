@@ -51,8 +51,9 @@ services:
       # Variables de versionado
       APP_VERSION: ${APP_VERSION:-v1.0.0}
       DEPLOY_DATE: ${DEPLOY_DATE:-unknown}
-    ports:
-      - "3000:3000"
+    # No exponer puerto 3000 al exterior, solo interno a través del proxy
+    expose:
+      - "3000"
     depends_on:
       db:
         condition: service_healthy
@@ -76,7 +77,7 @@ services:
       context: ./frontend
       target: production
       args:
-        VITE_API_URL: ${VITE_API_URL}
+        VITE_API_URL: /api
     container_name: scaramutti-tms-frontend-prod
     restart: always
     ports:
