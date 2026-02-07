@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:setup": "node scripts/db_setup.js",
-    "dev": "nodemon src/index.ts",
+    "dev": "NODE_ENV=development nodemon src/index.ts",
     "build": "tsc"
   },
   "keywords": [],
