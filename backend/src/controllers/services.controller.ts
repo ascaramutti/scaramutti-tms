@@ -247,8 +247,8 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
     const { id } = req.params;
     const { driverId, tractorId, trailerId, notes, force } = req.body as AssignResourcesRequest;
     const userId = (req as AuthenticatedRequest).user?.id;
-    if (!driverId || !tractorId || !trailerId) {
-        res.status(400).json({ status: 'ERROR', message: 'All resources are required' });
+    if (!driverId || !tractorId) {
+        res.status(400).json({ status: 'ERROR', message: 'Driver and tractor are required' });
         return;
     }
     try {
@@ -266,7 +266,6 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
             return;
         }
         const serviceData = currentServiceRes.rows[0]!;
-        const serviceDate = serviceData.tentative_date;
         const oldStatusName = serviceData.status_name;
 
         const allowedStatuses = ['pending_assignment'];
@@ -283,12 +282,16 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
             const warnings: string[] = [];
 
             const busyResourceSql = `
-                SELECT s.id, ss.name as status_name 
+                SELECT s.id, ss.name as status_name
                 FROM services s
                 JOIN service_statuses ss ON s.status_id = ss.id
                 WHERE ss.name IN ('pending_start', 'in_progress')
                 AND s.id != $1
-                AND (s.driver_id = $2 OR s.tractor_id = $3 OR s.trailer_id = $4)
+                AND (
+                    s.driver_id = $2
+                    OR s.tractor_id = $3
+                    OR (s.trailer_id = $4 AND $4 IS NOT NULL)
+                )
             `;
 
             const conflicts = await query<{ id: number, status_name: string }>(busyResourceSql, [id, driverId, tractorId, trailerId]);
@@ -351,7 +354,15 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
 
         await query('COMMIT');
 
-        res.status(200).json(result.rows[0]!);
+        const updatedService = result.rows[0]!;
+        const successMessage = trailerId
+            ? 'Servicio asignado correctamente'
+            : 'Servicio asignado correctamente (sin trailer)';
+
+        res.status(200).json({
+            ...updatedService,
+            message: successMessage
+        });
     } catch (error: any) {
         await query('ROLLBACK');
         console.error(`Assign Resources Error: ${error}`);
