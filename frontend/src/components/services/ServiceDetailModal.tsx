@@ -146,7 +146,7 @@ export function ServiceDetailModal({ isOpen, onClose, service }: ServiceDetailMo
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <Truck className="w-4 h-4 text-gray-400" />
-                                                <span className="text-sm text-gray-500">Unidades</span>
+                                                <span className="text-sm text-gray-500">Unidad</span>
                                             </div>
                                             <span className="font-medium text-gray-900">
                                                 {service.tractor_plate || 'N/A'}
