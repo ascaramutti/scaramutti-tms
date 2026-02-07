@@ -1,6 +1,15 @@
+// Load environment variables FIRST, before any other imports
+import dotenv from 'dotenv';
+import path from 'path';
+
+const envFile = process.env.NODE_ENV === 'production'
+  ? '.env.production'
+  : '.env.development';
+dotenv.config({ path: path.resolve(__dirname, '..', envFile) });
+
+// Now import everything else that might use environment variables
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { query } from './config/db';
 import { HealthResponse } from './interfaces/health/health.interface';
 import { ErrorResponse } from './interfaces/error/error.interface';
@@ -15,8 +24,6 @@ import serviceStatusRouter from './routes/service-statuses.route';
 import serviceRouter from './routes/services.route';
 import dashboardRouter from './routes/dashboard.route';
 import serviceTypesRouter from './routes/service-types.route';
-
-dotenv.config();
 
 const APP_VERSION = process.env.APP_VERSION || 'v0.0.0';
 const DEPLOY_DATE = process.env.DEPLOY_DATE || new Date().toISOString();

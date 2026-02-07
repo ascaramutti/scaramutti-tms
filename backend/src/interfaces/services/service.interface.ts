@@ -58,7 +58,7 @@ export interface CreateServiceRequest {
 export interface AssignResourcesRequest {
     driverId: number;
     tractorId: number;
-    trailerId: number;
+    trailerId?: number;
     notes?: string;
     force?: boolean;
 }

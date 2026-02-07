@@ -1,7 +1,4 @@
 import { Pool, QueryResultRow } from 'pg';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const pool: Pool = new Pool({
     host: process.env.DB_HOST,
