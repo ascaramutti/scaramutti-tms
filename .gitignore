@@ -42,4 +42,4 @@ coverage/
 *.tmp
 *.temp
 backend/temp-hash.js
-backend/scripts/
+frontend/.vite/

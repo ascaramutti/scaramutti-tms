@@ -74,6 +74,20 @@ export default function InProgressServicesPage() {
     }
   };
 
+  const handleRefreshServiceDetail = async () => {
+    if (selectedService) {
+      try {
+        const fullService = await servicesService.getServiceById(selectedService.id);
+        setSelectedService(fullService);
+        // También refrescar la lista para actualizar el contador
+        loadServices();
+      } catch (error) {
+        console.error('Error refreshing service detail:', error);
+        toast.error('No se pudo actualizar el detalle del servicio');
+      }
+    }
+  };
+
   const getRoleName = (role: string = '') => {
     const roles: Record<string, string> = {
       admin: 'Administrador',
@@ -161,6 +175,7 @@ export default function InProgressServicesPage() {
         isOpen={!!selectedService}
         onClose={() => setSelectedService(null)}
         service={selectedService}
+        onRefresh={handleRefreshServiceDetail}
       />
 
       <FinishServiceModal
