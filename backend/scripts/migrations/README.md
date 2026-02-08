@@ -41,6 +41,7 @@ Donde:
 | # | Archivo | Fecha | Descripción | Issue |
 |---|---------|-------|-------------|-------|
 | 001 | `001_create_service_assignments.sql` | 2026-02-05 | Crear tabla para asignaciones adicionales | US-003 |
+| 002 | `002_fix_timestamps_timezone.sql` | 2026-02-08 | Convertir timestamps a TIMESTAMPTZ (con timezone) | US-003 |
 
 ## ⚠️ Importante
 
