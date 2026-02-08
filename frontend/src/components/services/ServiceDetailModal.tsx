@@ -1,14 +1,30 @@
-import { X, MapPin, Calendar, User, Truck, DollarSign, Package, AlertCircle, FileText, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { X, MapPin, Calendar, User, Truck, DollarSign, Package, AlertCircle, FileText, Clock, Plus, Users } from 'lucide-react';
 import type { Service } from '../../interfaces/services.interface';
+import { AddUnitsModal } from './AddUnitsModal';
+import { useAuth } from '../../context/AuthContext';
 
 interface ServiceDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     service: Service | null;
+    onRefresh?: () => void;
 }
 
-export function ServiceDetailModal({ isOpen, onClose, service }: ServiceDetailModalProps) {
+export function ServiceDetailModal({ isOpen, onClose, service, onRefresh }: ServiceDetailModalProps) {
+    const { user } = useAuth();
+    const [isAddUnitsModalOpen, setIsAddUnitsModalOpen] = useState(false);
+
     if (!isOpen || !service) return null;
+
+    // Roles autorizados para agregar recursos adicionales
+    const canAddResources = ['admin', 'general_manager', 'operations_manager', 'dispatcher'].includes(user?.role || '');
+
+    const handleAddUnitsSuccess = () => {
+        if (onRefresh) {
+            onRefresh();
+        }
+    };
 
     const formatCurrency = (amount: number, currencyCode: string) => {
         return new Intl.NumberFormat('es-PE', {
@@ -131,7 +147,18 @@ export function ServiceDetailModal({ isOpen, onClose, service }: ServiceDetailMo
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Recursos */}
                         <div>
-                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Recursos Asignados</h3>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Recursos Asignados</h3>
+                                {service.status_name === 'in_progress' && canAddResources && (
+                                    <button
+                                        onClick={() => setIsAddUnitsModalOpen(true)}
+                                        className="flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-2 py-1 rounded-md transition-colors"
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                        Agregar Recursos
+                                    </button>
+                                )}
+                            </div>
                             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -228,6 +255,83 @@ export function ServiceDetailModal({ isOpen, onClose, service }: ServiceDetailMo
                         </div>
                     </div>
 
+                    {/* Recursos Adicionales Timeline */}
+                    {service.additionalAssignments && service.additionalAssignments.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Users className="w-5 h-5 text-green-600" />
+                                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+                                    Recursos Adicionales ({service.additionalAssignments.length})
+                                </h3>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="space-y-4 relative">
+                                    {/* Timeline line */}
+                                    <div className="absolute top-0 bottom-0 left-3 w-0.5 bg-gray-200"></div>
+
+                                    {service.additionalAssignments.map((assignment, index) => (
+                                        <div key={assignment.id} className="relative pl-8">
+                                            {/* Timeline dot */}
+                                            <div className="absolute left-0 top-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold z-10">
+                                                {index + 1}
+                                            </div>
+
+                                            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                                                {/* Recursos */}
+                                                <div className="space-y-2 mb-2">
+                                                    {assignment.truck && (
+                                                        <div className="flex items-center gap-2">
+                                                            <Truck className="w-4 h-4 text-gray-400" />
+                                                            <span className="text-sm">
+                                                                <span className="text-gray-500">Tracto:</span>{' '}
+                                                                <span className="font-medium text-gray-900">
+                                                                    {assignment.truck.plate} - {assignment.truck.model}
+                                                                </span>
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {assignment.trailer && (
+                                                        <div className="flex items-center gap-2">
+                                                            <Truck className="w-4 h-4 text-gray-400" />
+                                                            <span className="text-sm">
+                                                                <span className="text-gray-500">Trailer:</span>{' '}
+                                                                <span className="font-medium text-gray-900">
+                                                                    {assignment.trailer.plate} - {assignment.trailer.type}
+                                                                </span>
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {assignment.driver && (
+                                                        <div className="flex items-center gap-2">
+                                                            <User className="w-4 h-4 text-gray-400" />
+                                                            <span className="text-sm">
+                                                                <span className="text-gray-500">Conductor:</span>{' '}
+                                                                <span className="font-medium text-gray-900">
+                                                                    {assignment.driver.name}
+                                                                </span>
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Notes */}
+                                                <div className="bg-gray-50 rounded p-2 mb-2">
+                                                    <p className="text-xs text-gray-600 italic">{assignment.notes}</p>
+                                                </div>
+
+                                                {/* Metadata */}
+                                                <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+                                                    <span>Por: {assignment.assignedBy.name}</span>
+                                                    <span>{new Date(assignment.assignedAt).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Observaciones */}
                     <div className="space-y-4">
                         {service.observations && (
@@ -255,6 +359,14 @@ export function ServiceDetailModal({ isOpen, onClose, service }: ServiceDetailMo
                     </div>
                 </div>
             </div>
+
+            {/* Modal Agregar Recursos Adicionales */}
+            <AddUnitsModal
+                isOpen={isAddUnitsModalOpen}
+                onClose={() => setIsAddUnitsModalOpen(false)}
+                service={service}
+                onSuccess={handleAddUnitsSuccess}
+            />
         </div>
     );
 }

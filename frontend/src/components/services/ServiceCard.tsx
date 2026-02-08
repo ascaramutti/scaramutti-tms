@@ -1,4 +1,4 @@
-import { Clock, MapPin, Package, UserCircle, Truck, Ruler, Weight, User, Play, CheckCircle, AlertCircle } from 'lucide-react';
+import { Clock, MapPin, Package, UserCircle, Truck, Ruler, Weight, User, Play, CheckCircle, AlertCircle, Users } from 'lucide-react';
 import type { ServiceCardProps } from '../../interfaces/components.interface';
 
 export function ServiceCard({ service, variant = 'pending', onAction, onViewDetail }: ServiceCardProps) {
@@ -11,7 +11,10 @@ export function ServiceCard({ service, variant = 'pending', onAction, onViewDeta
       label: 'Pendiente',
       actionLabel: 'Asignar Recursos',
       actionIcon: Truck,
-      showResources: false
+      showResources: false,
+      badgeBg: 'bg-yellow-50',
+      badgeText: 'text-yellow-700',
+      badgeIcon: 'text-yellow-900'
     },
     pending_start: {
       color: 'bg-orange-500',
@@ -19,7 +22,10 @@ export function ServiceCard({ service, variant = 'pending', onAction, onViewDeta
       label: 'Pendiente de Inicio',
       actionLabel: 'Iniciar Servicio',
       actionIcon: Play,
-      showResources: true
+      showResources: true,
+      badgeBg: 'bg-orange-50',
+      badgeText: 'text-orange-700',
+      badgeIcon: 'text-orange-900'
     },
     in_progress: {
       color: 'bg-emerald-500',
@@ -27,7 +33,10 @@ export function ServiceCard({ service, variant = 'pending', onAction, onViewDeta
       label: 'En Ejecución',
       actionLabel: 'Finalizar Servicio',
       actionIcon: CheckCircle,
-      showResources: true
+      showResources: true,
+      badgeBg: 'bg-emerald-50',
+      badgeText: 'text-emerald-700',
+      badgeIcon: 'text-emerald-900'
     }
   }[variant];
 
@@ -181,6 +190,17 @@ export function ServiceCard({ service, variant = 'pending', onAction, onViewDeta
                 </div>
               </div>
             </>
+          )}
+
+          {/* US-003: Mostrar contador de asignaciones adicionales (independiente del estado) */}
+          {service.additionalAssignmentsCount !== undefined && service.additionalAssignmentsCount > 0 && (
+            <div className={`flex items-center justify-between text-sm ${config.badgeBg} p-2 rounded-lg -mx-2`}>
+              <span className={`${config.badgeText} font-medium`}>Asignaciones adicionales</span>
+              <div className={`flex items-center gap-1 ${config.badgeIcon}`}>
+                <Users className="w-4 h-4" />
+                <span className="font-bold">{service.additionalAssignmentsCount}</span>
+              </div>
+            </div>
           )}
 
           {onAction && (
