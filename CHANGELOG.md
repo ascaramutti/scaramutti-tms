@@ -14,6 +14,69 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ---
 
+## [1.2.0] - 2026-02-08
+
+### Agregado
+
+**Recursos Adicionales a Servicios en Ejecución (US-003)**
+- Nueva funcionalidad para agregar recursos adicionales (tractores, trailers, conductores) a servicios que ya están en ejecución
+- Permite adaptarse a cambios operativos sin cerrar el servicio original:
+  - Cambio de tracto por falla mecánica
+  - Relevo de conductores en viajes largos
+  - Cargas compartidas entre múltiples vehículos
+  - Agregar trailer durante la ejecución
+
+**Backend:**
+- Nueva tabla `service_assignments` con auditoría completa (quién asignó, cuándo)
+- Endpoint POST `/api/services/:id/assignments` con validaciones:
+  - Solo servicios en estado `in_progress` pueden agregar recursos
+  - Detección inteligente de conflictos (recursos ocupados en otros servicios)
+  - Parámetro `force` para sobrescribir advertencias de conflictos
+  - Validación de duplicados en mismo servicio (400) vs conflictos (409)
+  - Notes obligatorio (mínimo 10 caracteres) para documentar motivo
+- Modificación a GET `/api/services/:id`: incluye array `additionalAssignments` con datos completos
+- Modificación a GET `/api/services`: incluye campo `additionalAssignmentsCount` (contador)
+- Queries optimizadas con UNION para verificar conflictos en ambas tablas (services + service_assignments)
+
+**Frontend:**
+- Modal `AddUnitsModal` con formulario completo:
+  - Dropdowns opcionales para tracto, trailer y conductor
+  - Campo notes obligatorio con validación
+  - Manejo de conflictos con alerta roja y botones Cancelar/FORZAR
+- Timeline visual de recursos adicionales en `ServiceDetailModal`:
+  - Diseño cronológico (más antiguo → más reciente)
+  - Muestra recursos asignados, notas y metadata (quién asignó, cuándo)
+  - Visible independientemente del estado del servicio
+- Badge de contador en `ServiceCard` con colores dinámicos según estado
+- Botón "Agregar Recursos" con validación de permisos por rol
+- Validación frontend: al menos un recurso debe estar presente, notes mínimo 10 caracteres
+
+**Base de Datos:**
+- **Migración 001:** Tabla `service_assignments` con constraints, foreign keys e índices
+- **Migración 002:** Conversión de 12 tablas de TIMESTAMP a TIMESTAMPTZ (con timezone)
+
+### Corregido
+
+**Zona Horaria en Timestamps**
+- Fix crítico: Todas las columnas timestamp ahora usan `TIMESTAMPTZ` (timestamp with time zone)
+- Tablas afectadas: service_assignments, service_audit_logs, y todas las created_at/updated_at (12 tablas total)
+- Datos existentes interpretados como hora de Lima (UTC-5) y convertidos a UTC
+- Frontend ahora muestra fechas correctamente en la zona horaria local del usuario
+- Fix específico: `service_assignments.assigned_at` ahora muestra hora correcta en UI
+
+### Testing
+- ✅ 16/16 casos de prueba ejecutados (100% PASS)
+- Backend: 14/14 casos (validaciones 400, conflictos 409, operaciones 200, GET endpoints)
+- Frontend: 2/2 casos (modal conflictos, botón FORZAR)
+
+### Técnico
+- 21 archivos modificados (+1,402 líneas de código)
+- 2 migraciones de base de datos ejecutadas
+- Versión sincronizada en backend y frontend: 1.2.0
+- Deploy en producción sin downtime (08/02/2026 ~1:30 AM)
+
+---
+
 ## [1.1.0] - 2026-02-07
 
 ### Cambiado
@@ -195,4 +258,4 @@ Formato: `MAJOR.MINOR.PATCH` (ej: 1.2.3)
 ---
 
 **Mantenido por:** Angel Scaramutti
-**Última actualización:** 07 de Febrero 2026
+**Última actualización:** 08 de Febrero 2026
