@@ -3,6 +3,8 @@ import { query } from "../config/db";
 import { Service, CreateServiceRequest, AssignResourcesRequest, ChangeStatusRequest, UpdateServiceRequest } from "../interfaces/services/service.interface";
 import { ErrorResponse } from "../interfaces/error/error.interface";
 import { AuthenticatedRequest } from "../interfaces/auth/auth.interface";
+import { CreateServiceAssignmentDTO, ServiceAssignment } from "../interfaces/service-assignments.interface";
+import { checkAllConflicts } from "../services/service-assignments.service";
 
 export const createService = async (req: Request<{}, {}, CreateServiceRequest>, res: Response<Service | ErrorResponse>): Promise<void> => {
     const userId = (req as AuthenticatedRequest).user?.id;
@@ -567,4 +569,176 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
         console.error(`Admin Update Error: ${error}`);
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
+};
+
+/**
+ * POST /api/services/:id/assignments
+ * US-003: Agrega unidades adicionales (tracto, trailer, conductor) a un servicio en ejecución
+ *
+ * @param req.params.id - ID del servicio
+ * @param req.body - CreateServiceAssignmentDTO
+ * @param req.user.id - ID del usuario autenticado (del token JWT)
+ *
+ * @returns 200 - Asignación creada exitosamente
+ * @returns 400 - Validación fallida
+ * @returns 404 - Servicio no encontrado
+ * @returns 409 - Conflictos detectados (requiere force=true)
+ */
+export const addServiceAssignment = async (req: Request, res: Response) => {
+  try {
+    const serviceId = parseInt(req.params.id as string);
+    const dto: CreateServiceAssignmentDTO = req.body;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    // ====================================
+    // VALIDACIONES
+    // ====================================
+
+    // 1. Validar que al menos UNA unidad esté presente
+    if (!dto.truckId && !dto.trailerId && !dto.driverId) {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'Debe seleccionar al menos un recurso (tracto, trailer o conductor)'
+      });
+      return;
+    }
+
+    // 2. Validar que notes sea obligatorio y mínimo 10 caracteres
+    if (!dto.notes || dto.notes.trim().length < 10) {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'El campo "notes" es obligatorio y debe tener mínimo 10 caracteres'
+      });
+      return;
+    }
+
+    // 3. Verificar que el servicio existe
+    const serviceCheck = await query(
+      'SELECT id, status_id FROM services WHERE id = $1',
+      [serviceId]
+    );
+
+    if (serviceCheck.rows.length === 0) {
+      res.status(404).json({
+        status: 'ERROR',
+        message: `Servicio #${serviceId} no encontrado`
+      });
+      return;
+    }
+
+    const service = serviceCheck.rows[0];
+
+    // 4. Validar que el servicio esté en estado "in_progress" (status_id = 3)
+    if (service.status_id !== 3) {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'Solo se pueden agregar recursos a servicios en estado "En progreso"'
+      });
+      return;
+    }
+
+    // ====================================
+    // DETECCIÓN DE CONFLICTOS
+    // ====================================
+
+    // Si force !== true, verificar conflictos
+    if (dto.force !== true) {
+      const conflicts = await checkAllConflicts(
+        dto.truckId,
+        dto.trailerId,
+        dto.driverId,
+        serviceId
+      );
+
+      if (conflicts.length > 0) {
+        // Hay conflictos, retornar 409 con mensaje
+        const conflictMessage = conflicts.join('\n');
+        res.status(409).json({
+          status: 'WARNING',
+          message: `Conflictos detectados:\n\n${conflictMessage}\n\n¿Desea continuar de todos modos?`
+        });
+        return;
+      }
+    }
+
+    // ====================================
+    // INSERTAR ASIGNACIÓN
+    // ====================================
+
+    const insertQuery = `
+      INSERT INTO service_assignments (
+        service_id,
+        truck_id,
+        trailer_id,
+        driver_id,
+        notes,
+        assigned_by
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
+
+    const insertResult = await query<ServiceAssignment>(insertQuery, [
+      serviceId,
+      dto.truckId || null,
+      dto.trailerId || null,
+      dto.driverId || null,
+      dto.notes.trim(),
+      userId
+    ]);
+
+    const newAssignment = insertResult.rows[0];
+
+    if (!newAssignment) {
+      res.status(500).json({
+        status: 'ERROR',
+        message: 'Error al crear la asignación'
+      });
+      return;
+    }
+
+    // ====================================
+    // RESPUESTA EXITOSA
+    // ====================================
+
+    res.status(200).json({
+      status: 'OK',
+      message: 'Recursos agregados exitosamente al servicio',
+      data: {
+        id: newAssignment.id,
+        serviceId: newAssignment.serviceId,
+        truckId: newAssignment.truckId,
+        trailerId: newAssignment.trailerId,
+        driverId: newAssignment.driverId,
+        notes: newAssignment.notes,
+        assignedBy: newAssignment.assignedBy,
+        assignedAt: newAssignment.assignedAt
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error in addServiceAssignment:', error);
+
+    // Error de foreign key (unidad no existe)
+    if (error.code === '23503') {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'Una o más unidades seleccionadas no existen'
+      });
+      return;
+    }
+
+    // Error de constraint (at_least_one_unit)
+    if (error.code === '23514') {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'Debe seleccionar al menos un recurso'
+      });
+      return;
+    }
+
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Error interno al agregar recursos'
+    });
+  }
 };
