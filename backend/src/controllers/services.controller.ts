@@ -119,7 +119,7 @@ export const getServices = async (req: Request, res: Response): Promise<void> =>
 
         // Then get the paginated services
         let sql = `
-            SELECT 
+            SELECT
                 s.id,
                 s.client_id, c.name as client_name, c.ruc as client_ruc,
                 s.origin, s.destination, s.tentative_date,
@@ -131,12 +131,14 @@ export const getServices = async (req: Request, res: Response): Promise<void> =>
                 s.created_at, s.updated_at,
                 s.price,
                 s.currency_id, cur.code as currency_code,
-                
+
                 s.driver_id, (w.first_name || ' ' || w.last_name) as driver_name,
                 s.tractor_id, tr.plate as tractor_plate,
                 s.trailer_id, tl.plate as trailer_plate,
-                
-                s.status_id, ss.name as status_name
+
+                s.status_id, ss.name as status_name,
+
+                (SELECT COUNT(*) FROM service_assignments sa WHERE sa.service_id = s.id) as additional_assignments_count
             FROM services s
             JOIN clients c ON s.client_id = c.id
             JOIN service_types st ON s.service_type_id = st.id
@@ -175,12 +177,19 @@ export const getServices = async (req: Request, res: Response): Promise<void> =>
         const userRole = (req as AuthenticatedRequest).user?.role;
         const financialRoles = ['admin', 'general_manager', 'sales', 'operations_manager'];
 
-        const services: Service[] = result.rows.map(service => {
+        const services: Service[] = result.rows.map((service: any) => {
+            // Map snake_case to camelCase and exclude original snake_case field
+            const { additional_assignments_count, ...restService } = service;
+            const mappedService: Service = {
+                ...restService,
+                additionalAssignmentsCount: parseInt(additional_assignments_count || '0')
+            };
+
             if (!financialRoles.includes(userRole || '')) {
-                const { price, currency_id, currency_code, ...safeService } = service;
+                const { price, currency_id, currency_code, ...safeService } = mappedService;
                 return safeService;
             }
-            return service;
+            return mappedService;
         });
 
         // Return both services and total count
@@ -231,6 +240,46 @@ export const getServiceById = async (req: Request, res: Response<Service | Error
             return;
         }
         const service = result.rows[0]!;
+
+        // US-003: Obtener asignaciones adicionales
+        const additionalAssignmentsQuery = `
+            SELECT
+                sa.id,
+                sa.truck_id,
+                t.plate as truck_plate,
+                t.model as truck_model,
+                sa.trailer_id,
+                tr.plate as trailer_plate,
+                tr.type as trailer_type,
+                sa.driver_id,
+                w.first_name || ' ' || w.last_name as driver_name,
+                sa.notes,
+                sa.assigned_by,
+                u.username as assigned_by_username,
+                sa.assigned_at
+            FROM service_assignments sa
+            LEFT JOIN tractors t ON sa.truck_id = t.id
+            LEFT JOIN trailers tr ON sa.trailer_id = tr.id
+            LEFT JOIN drivers d ON sa.driver_id = d.id
+            LEFT JOIN workers w ON d.worker_id = w.id
+            JOIN users u ON sa.assigned_by = u.id
+            WHERE sa.service_id = $1
+            ORDER BY sa.assigned_at ASC
+        `;
+
+        const additionalResult = await query(additionalAssignmentsQuery, [id]);
+
+        // Mapear asignaciones adicionales
+        service.additionalAssignments = additionalResult.rows.map((row: any) => ({
+            id: row.id,
+            truck: row.truck_id ? { id: row.truck_id, plate: row.truck_plate, model: row.truck_model } : null,
+            trailer: row.trailer_id ? { id: row.trailer_id, plate: row.trailer_plate, type: row.trailer_type } : null,
+            driver: row.driver_id ? { id: row.driver_id, name: row.driver_name } : null,
+            notes: row.notes,
+            assignedBy: { id: row.assigned_by, name: row.assigned_by_username },
+            assignedAt: row.assigned_at
+        }));
+
         const userRole = (req as AuthenticatedRequest).user?.role;
         const financialRoles = ['admin', 'general_manager', 'sales', 'operations_manager'];
         if (!financialRoles.includes(userRole || '')) {
@@ -766,3 +815,4 @@ export const addServiceAssignment = async (req: Request, res: Response) => {
     });
   }
 };
+
