@@ -98,7 +98,7 @@ export function LoginPage() {
           </form>
 
           <div className="mt-8 text-center">
-            <p className="text-xs text-gray-400">© 2026 Transportes Scaramutti v1.0</p>
+            <p className="text-xs text-gray-400">© 2026 Transportes Scaramutti v{__APP_VERSION__}</p>
           </div>
         </div>
       </div>
