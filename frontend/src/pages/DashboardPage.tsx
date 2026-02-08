@@ -97,6 +97,30 @@ export function DashboardPage() {
         navigate(route);
     };
 
+    const handleViewDetail = async (serviceId: number) => {
+        try {
+            const fullService = await servicesService.getServiceById(serviceId);
+            setSelectedService(fullService);
+        } catch (error) {
+            console.error('Error fetching service detail:', error);
+            toast.error('No se pudo cargar el detalle del servicio');
+        }
+    };
+
+    const handleRefreshServiceDetail = async () => {
+        if (selectedService) {
+            try {
+                const fullService = await servicesService.getServiceById(selectedService.id);
+                setSelectedService(fullService);
+                // También refrescar la lista
+                loadRecentActivity();
+            } catch (error) {
+                console.error('Error refreshing service detail:', error);
+                toast.error('No se pudo actualizar el detalle del servicio');
+            }
+        }
+    };
+
     const getRoleName = (role: string = '') => {
         const roles: Record<string, string> = {
             admin: 'Administrador',
@@ -297,7 +321,7 @@ export function DashboardPage() {
                                             <tr
                                                 key={service.id}
                                                 className="hover:bg-gray-50 cursor-pointer transition-colors"
-                                                onClick={() => setSelectedService(service)}
+                                                onClick={() => handleViewDetail(service.id)}
                                             >
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                                     #{service.id}
@@ -380,6 +404,7 @@ export function DashboardPage() {
                     isOpen={!!selectedService}
                     onClose={() => setSelectedService(null)}
                     service={selectedService}
+                    onRefresh={handleRefreshServiceDetail}
                 />
             </main>
         </div>

@@ -3,6 +3,8 @@ import { query } from "../config/db";
 import { Service, CreateServiceRequest, AssignResourcesRequest, ChangeStatusRequest, UpdateServiceRequest } from "../interfaces/services/service.interface";
 import { ErrorResponse } from "../interfaces/error/error.interface";
 import { AuthenticatedRequest } from "../interfaces/auth/auth.interface";
+import { CreateServiceAssignmentDTO, ServiceAssignment } from "../interfaces/service-assignments.interface";
+import { checkAllConflicts, checkDuplicateInSameService } from "../services/service-assignments.service";
 
 export const createService = async (req: Request<{}, {}, CreateServiceRequest>, res: Response<Service | ErrorResponse>): Promise<void> => {
     const userId = (req as AuthenticatedRequest).user?.id;
@@ -117,7 +119,7 @@ export const getServices = async (req: Request, res: Response): Promise<void> =>
 
         // Then get the paginated services
         let sql = `
-            SELECT 
+            SELECT
                 s.id,
                 s.client_id, c.name as client_name, c.ruc as client_ruc,
                 s.origin, s.destination, s.tentative_date,
@@ -129,12 +131,14 @@ export const getServices = async (req: Request, res: Response): Promise<void> =>
                 s.created_at, s.updated_at,
                 s.price,
                 s.currency_id, cur.code as currency_code,
-                
+
                 s.driver_id, (w.first_name || ' ' || w.last_name) as driver_name,
                 s.tractor_id, tr.plate as tractor_plate,
                 s.trailer_id, tl.plate as trailer_plate,
-                
-                s.status_id, ss.name as status_name
+
+                s.status_id, ss.name as status_name,
+
+                (SELECT COUNT(*) FROM service_assignments sa WHERE sa.service_id = s.id) as additional_assignments_count
             FROM services s
             JOIN clients c ON s.client_id = c.id
             JOIN service_types st ON s.service_type_id = st.id
@@ -173,12 +177,19 @@ export const getServices = async (req: Request, res: Response): Promise<void> =>
         const userRole = (req as AuthenticatedRequest).user?.role;
         const financialRoles = ['admin', 'general_manager', 'sales', 'operations_manager'];
 
-        const services: Service[] = result.rows.map(service => {
+        const services: Service[] = result.rows.map((service: any) => {
+            // Map snake_case to camelCase and exclude original snake_case field
+            const { additional_assignments_count, ...restService } = service;
+            const mappedService: Service = {
+                ...restService,
+                additionalAssignmentsCount: parseInt(additional_assignments_count || '0')
+            };
+
             if (!financialRoles.includes(userRole || '')) {
-                const { price, currency_id, currency_code, ...safeService } = service;
+                const { price, currency_id, currency_code, ...safeService } = mappedService;
                 return safeService;
             }
-            return service;
+            return mappedService;
         });
 
         // Return both services and total count
@@ -229,6 +240,46 @@ export const getServiceById = async (req: Request, res: Response<Service | Error
             return;
         }
         const service = result.rows[0]!;
+
+        // US-003: Obtener asignaciones adicionales
+        const additionalAssignmentsQuery = `
+            SELECT
+                sa.id,
+                sa.truck_id,
+                t.plate as truck_plate,
+                t.model as truck_model,
+                sa.trailer_id,
+                tr.plate as trailer_plate,
+                tr.type as trailer_type,
+                sa.driver_id,
+                w.first_name || ' ' || w.last_name as driver_name,
+                sa.notes,
+                sa.assigned_by,
+                u.username as assigned_by_username,
+                sa.assigned_at
+            FROM service_assignments sa
+            LEFT JOIN tractors t ON sa.truck_id = t.id
+            LEFT JOIN trailers tr ON sa.trailer_id = tr.id
+            LEFT JOIN drivers d ON sa.driver_id = d.id
+            LEFT JOIN workers w ON d.worker_id = w.id
+            JOIN users u ON sa.assigned_by = u.id
+            WHERE sa.service_id = $1
+            ORDER BY sa.assigned_at ASC
+        `;
+
+        const additionalResult = await query(additionalAssignmentsQuery, [id]);
+
+        // Mapear asignaciones adicionales
+        service.additionalAssignments = additionalResult.rows.map((row: any) => ({
+            id: row.id,
+            truck: row.truck_id ? { id: row.truck_id, plate: row.truck_plate, model: row.truck_model } : null,
+            trailer: row.trailer_id ? { id: row.trailer_id, plate: row.trailer_plate, type: row.trailer_type } : null,
+            driver: row.driver_id ? { id: row.driver_id, name: row.driver_name } : null,
+            notes: row.notes,
+            assignedBy: { id: row.assigned_by, name: row.assigned_by_username },
+            assignedAt: row.assigned_at
+        }));
+
         const userRole = (req as AuthenticatedRequest).user?.role;
         const financialRoles = ['admin', 'general_manager', 'sales', 'operations_manager'];
         if (!financialRoles.includes(userRole || '')) {
@@ -568,3 +619,200 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
 };
+
+/**
+ * POST /api/services/:id/assignments
+ * US-003: Agrega unidades adicionales (tracto, trailer, conductor) a un servicio en ejecución
+ *
+ * @param req.params.id - ID del servicio
+ * @param req.body - CreateServiceAssignmentDTO
+ * @param req.user.id - ID del usuario autenticado (del token JWT)
+ *
+ * @returns 200 - Asignación creada exitosamente
+ * @returns 400 - Validación fallida
+ * @returns 404 - Servicio no encontrado
+ * @returns 409 - Conflictos detectados (requiere force=true)
+ */
+export const addServiceAssignment = async (req: Request, res: Response) => {
+  try {
+    const serviceId = parseInt(req.params.id as string);
+    const dto: CreateServiceAssignmentDTO = req.body;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    // ====================================
+    // VALIDACIONES
+    // ====================================
+
+    // 1. Validar que al menos UNA unidad esté presente
+    if (!dto.truckId && !dto.trailerId && !dto.driverId) {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'Debe seleccionar al menos un recurso (tracto, trailer o conductor)'
+      });
+      return;
+    }
+
+    // 2. Validar que notes sea obligatorio y mínimo 10 caracteres
+    if (!dto.notes || dto.notes.trim().length < 10) {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'El campo "notes" es obligatorio y debe tener mínimo 10 caracteres'
+      });
+      return;
+    }
+
+    // 3. Verificar que el servicio existe
+    const serviceCheck = await query(
+      'SELECT id, status_id FROM services WHERE id = $1',
+      [serviceId]
+    );
+
+    if (serviceCheck.rows.length === 0) {
+      res.status(404).json({
+        status: 'ERROR',
+        message: `Servicio #${serviceId} no encontrado`
+      });
+      return;
+    }
+
+    const service = serviceCheck.rows[0];
+
+    // 4. Validar que el servicio esté en estado "in_progress" (status_id = 3)
+    if (service.status_id !== 3) {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'Solo se pueden agregar recursos a servicios en estado "En progreso"'
+      });
+      return;
+    }
+
+    // ====================================
+    // VALIDACIÓN DE DUPLICADOS (NO NEGOCIABLE)
+    // ====================================
+
+    // Verificar si el recurso ya está asignado al MISMO servicio
+    const duplicates = await checkDuplicateInSameService(
+      dto.truckId,
+      dto.trailerId,
+      dto.driverId,
+      serviceId
+    );
+
+    if (duplicates.length > 0) {
+      // Duplicados son un ERROR, no se puede forzar
+      res.status(400).json({
+        status: 'ERROR',
+        message: `No se puede agregar el mismo recurso dos veces:\n\n${duplicates.join('\n')}`
+      });
+      return;
+    }
+
+    // ====================================
+    // DETECCIÓN DE CONFLICTOS (PUEDE FORZARSE)
+    // ====================================
+
+    // Si force !== true, verificar conflictos con OTROS servicios
+    if (dto.force !== true) {
+      const conflicts = await checkAllConflicts(
+        dto.truckId,
+        dto.trailerId,
+        dto.driverId,
+        serviceId
+      );
+
+      if (conflicts.length > 0) {
+        // Hay conflictos con otros servicios, retornar 409 (puede forzarse)
+        const conflictMessage = conflicts.join('\n');
+        res.status(409).json({
+          status: 'WARNING',
+          message: `Conflictos detectados:\n\n${conflictMessage}\n\n¿Desea continuar de todos modos?`
+        });
+        return;
+      }
+    }
+
+    // ====================================
+    // INSERTAR ASIGNACIÓN
+    // ====================================
+
+    const insertQuery = `
+      INSERT INTO service_assignments (
+        service_id,
+        truck_id,
+        trailer_id,
+        driver_id,
+        notes,
+        assigned_by
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
+
+    const insertResult = await query<ServiceAssignment>(insertQuery, [
+      serviceId,
+      dto.truckId || null,
+      dto.trailerId || null,
+      dto.driverId || null,
+      dto.notes.trim(),
+      userId
+    ]);
+
+    const newAssignment = insertResult.rows[0];
+
+    if (!newAssignment) {
+      res.status(500).json({
+        status: 'ERROR',
+        message: 'Error al crear la asignación'
+      });
+      return;
+    }
+
+    // ====================================
+    // RESPUESTA EXITOSA
+    // ====================================
+
+    // PostgreSQL retorna campos en snake_case
+    const result = newAssignment as any;
+
+    res.status(200).json({
+      status: 'OK',
+      message: 'Recursos agregados exitosamente al servicio',
+      data: {
+        id: result.id,
+        serviceId: result.service_id,
+        truckId: result.truck_id,
+        trailerId: result.trailer_id,
+        driverId: result.driver_id,
+        notes: result.notes,
+        assignedBy: result.assigned_by,
+        assignedAt: result.assigned_at
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error in addServiceAssignment:', error);
+
+    // Error de foreign key (unidad no existe)
+    if (error.code === '23503') {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'Una o más unidades seleccionadas no existen'
+      });
+      return;
+    }
+
+    // Error de constraint (at_least_one_unit)
+    if (error.code === '23514') {
+      res.status(400).json({
+        status: 'ERROR',
+        message: 'Debe seleccionar al menos un recurso'
+      });
+      return;
+    }
+
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Error interno al agregar recursos'
+    });
+  }
+};
+

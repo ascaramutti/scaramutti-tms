@@ -1,5 +1,5 @@
 import api from './api';
-import type { Service, CreateServiceRequest, ChangeStatusPayload, AssignResourcesPayload } from '../interfaces/services.interface';
+import type { Service, CreateServiceRequest, ChangeStatusPayload, AssignResourcesPayload, AddServiceAssignmentPayload, AdditionalAssignment } from '../interfaces/services.interface';
 
 export const servicesService = {
     getServices: async (filters?: { status?: string; date?: string; clientId?: number; search?: string; limit?: number; offset?: number; sort?: 'recent' }): Promise<{ services: Service[]; total: number }> => {
@@ -33,5 +33,11 @@ export const servicesService = {
     changeStatus: async (serviceId: number, data: ChangeStatusPayload): Promise<Service> => {
         const response = await api.patch<Service>(`/services/${serviceId}/status`, data);
         return response.data;
+    },
+
+    // US-003: Agregar unidades adicionales a servicio en ejecución
+    addServiceAssignment: async (serviceId: number, data: AddServiceAssignmentPayload): Promise<AdditionalAssignment> => {
+        const response = await api.post<{ data: AdditionalAssignment }>(`/services/${serviceId}/assignments`, data);
+        return response.data.data;
     }
 };
