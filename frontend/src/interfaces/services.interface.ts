@@ -1,3 +1,17 @@
+/**
+ * Asignación adicional de recursos a un servicio
+ * (para incluir en la respuesta de Service)
+ */
+export interface AdditionalAssignment {
+    id: number;
+    truck?: { id: number; plate: string; model: string } | null;
+    trailer?: { id: number; plate: string; type: string } | null;
+    driver?: { id: number; name: string } | null;
+    notes: string;
+    assignedBy: { id: number; name: string };
+    assignedAt: string;
+}
+
 export interface Service {
     id: number;
     client_id: number;
@@ -29,6 +43,10 @@ export interface Service {
     tractor_plate?: string;
     trailer_id?: number | null;
     trailer_plate?: string;
+
+    // US-003: Asignaciones adicionales (recursos agregados durante la ejecución)
+    additionalAssignments?: AdditionalAssignment[];
+    additionalAssignmentsCount?: number; // Contador para listados
 }
 
 export interface CreateServiceRequest {
@@ -52,6 +70,14 @@ export interface AssignResourcesPayload {
     tractorId: number;
     trailerId?: number;
     notes?: string;
+    force?: boolean;
+}
+
+export interface AddServiceAssignmentPayload {
+    truckId?: number;
+    trailerId?: number;
+    driverId?: number;
+    notes: string;
     force?: boolean;
 }
 
