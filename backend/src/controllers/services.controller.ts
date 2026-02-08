@@ -4,7 +4,7 @@ import { Service, CreateServiceRequest, AssignResourcesRequest, ChangeStatusRequ
 import { ErrorResponse } from "../interfaces/error/error.interface";
 import { AuthenticatedRequest } from "../interfaces/auth/auth.interface";
 import { CreateServiceAssignmentDTO, ServiceAssignment } from "../interfaces/service-assignments.interface";
-import { checkAllConflicts } from "../services/service-assignments.service";
+import { checkAllConflicts, checkDuplicateInSameService } from "../services/service-assignments.service";
 
 export const createService = async (req: Request<{}, {}, CreateServiceRequest>, res: Response<Service | ErrorResponse>): Promise<void> => {
     const userId = (req as AuthenticatedRequest).user?.id;
@@ -638,10 +638,31 @@ export const addServiceAssignment = async (req: Request, res: Response) => {
     }
 
     // ====================================
-    // DETECCIÓN DE CONFLICTOS
+    // VALIDACIÓN DE DUPLICADOS (NO NEGOCIABLE)
     // ====================================
 
-    // Si force !== true, verificar conflictos
+    // Verificar si el recurso ya está asignado al MISMO servicio
+    const duplicates = await checkDuplicateInSameService(
+      dto.truckId,
+      dto.trailerId,
+      dto.driverId,
+      serviceId
+    );
+
+    if (duplicates.length > 0) {
+      // Duplicados son un ERROR, no se puede forzar
+      res.status(400).json({
+        status: 'ERROR',
+        message: `No se puede agregar el mismo recurso dos veces:\n\n${duplicates.join('\n')}`
+      });
+      return;
+    }
+
+    // ====================================
+    // DETECCIÓN DE CONFLICTOS (PUEDE FORZARSE)
+    // ====================================
+
+    // Si force !== true, verificar conflictos con OTROS servicios
     if (dto.force !== true) {
       const conflicts = await checkAllConflicts(
         dto.truckId,
@@ -651,7 +672,7 @@ export const addServiceAssignment = async (req: Request, res: Response) => {
       );
 
       if (conflicts.length > 0) {
-        // Hay conflictos, retornar 409 con mensaje
+        // Hay conflictos con otros servicios, retornar 409 (puede forzarse)
         const conflictMessage = conflicts.join('\n');
         res.status(409).json({
           status: 'WARNING',
@@ -700,18 +721,21 @@ export const addServiceAssignment = async (req: Request, res: Response) => {
     // RESPUESTA EXITOSA
     // ====================================
 
+    // PostgreSQL retorna campos en snake_case
+    const result = newAssignment as any;
+
     res.status(200).json({
       status: 'OK',
       message: 'Recursos agregados exitosamente al servicio',
       data: {
-        id: newAssignment.id,
-        serviceId: newAssignment.serviceId,
-        truckId: newAssignment.truckId,
-        trailerId: newAssignment.trailerId,
-        driverId: newAssignment.driverId,
-        notes: newAssignment.notes,
-        assignedBy: newAssignment.assignedBy,
-        assignedAt: newAssignment.assignedAt
+        id: result.id,
+        serviceId: result.service_id,
+        truckId: result.truck_id,
+        trailerId: result.trailer_id,
+        driverId: result.driver_id,
+        notes: result.notes,
+        assignedBy: result.assigned_by,
+        assignedAt: result.assigned_at
       }
     });
 
