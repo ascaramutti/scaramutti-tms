@@ -177,7 +177,86 @@ export const checkDriverConflict = async (
 };
 
 /**
- * Verifica todos los conflictos posibles y genera un mensaje detallado
+ * Verifica si un recurso ya está asignado al mismo servicio
+ * (previene duplicados en asignaciones adicionales)
+ */
+export const checkDuplicateInSameService = async (
+  truckId: number | undefined,
+  trailerId: number | undefined,
+  driverId: number | undefined,
+  serviceId: number
+): Promise<string[]> => {
+  const duplicates: string[] = [];
+
+  // Verificar en asignación inicial (tabla services)
+  const initialAssignmentQuery = `
+    SELECT
+      s.tractor_id,
+      s.trailer_id,
+      s.driver_id,
+      t.plate as tractor_plate,
+      tr.plate as trailer_plate,
+      w.first_name || ' ' || w.last_name as driver_name
+    FROM services s
+    LEFT JOIN tractors t ON s.tractor_id = t.id
+    LEFT JOIN trailers tr ON s.trailer_id = tr.id
+    LEFT JOIN drivers d ON s.driver_id = d.id
+    LEFT JOIN workers w ON d.worker_id = w.id
+    WHERE s.id = $1
+  `;
+
+  const initialResult = await query(initialAssignmentQuery, [serviceId]);
+  const initial = initialResult.rows[0];
+
+  if (initial) {
+    if (truckId && initial.tractor_id === truckId) {
+      duplicates.push(`El tracto ${initial.tractor_plate} ya está asignado a este servicio (asignación inicial)`);
+    }
+    if (trailerId && initial.trailer_id === trailerId) {
+      duplicates.push(`El trailer ${initial.trailer_plate} ya está asignado a este servicio (asignación inicial)`);
+    }
+    if (driverId && initial.driver_id === driverId) {
+      duplicates.push(`El conductor ${initial.driver_name} ya está asignado a este servicio (asignación inicial)`);
+    }
+  }
+
+  // Verificar en asignaciones adicionales previas
+  const additionalAssignmentsQuery = `
+    SELECT
+      sa.truck_id,
+      sa.trailer_id,
+      sa.driver_id,
+      t.plate as truck_plate,
+      tr.plate as trailer_plate,
+      w.first_name || ' ' || w.last_name as driver_name
+    FROM service_assignments sa
+    LEFT JOIN tractors t ON sa.truck_id = t.id
+    LEFT JOIN trailers tr ON sa.trailer_id = tr.id
+    LEFT JOIN drivers d ON sa.driver_id = d.id
+    LEFT JOIN workers w ON d.worker_id = w.id
+    WHERE sa.service_id = $1
+  `;
+
+  const additionalResult = await query(additionalAssignmentsQuery, [serviceId]);
+
+  for (const row of additionalResult.rows) {
+    if (truckId && row.truck_id === truckId) {
+      duplicates.push(`El tracto ${row.truck_plate} ya fue agregado previamente a este servicio`);
+    }
+    if (trailerId && row.trailer_id === trailerId) {
+      duplicates.push(`El trailer ${row.trailer_plate} ya fue agregado previamente a este servicio`);
+    }
+    if (driverId && row.driver_id === driverId) {
+      duplicates.push(`El conductor ${row.driver_name} ya fue agregado previamente a este servicio`);
+    }
+  }
+
+  return duplicates;
+};
+
+/**
+ * Verifica conflictos con otros servicios activos
+ * (NO incluye duplicados en el mismo servicio - esos se manejan por separado)
  *
  * @param truckId - ID del tracto (opcional)
  * @param trailerId - ID del trailer (opcional)
