@@ -87,6 +87,31 @@ export interface ChangeStatusPayload {
     date?: string;
 }
 
+// US-004: Editar servicio con justificación
+export interface UpdateServiceRequest {
+    clientId?: number;
+    origin?: string;
+    destination?: string;
+    tentativeDate?: string;
+    serviceTypeId?: number;
+    cargoTypeId?: number;
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    observations?: string;
+    price?: number;
+    currencyId?: number;
+    driverId?: number;
+    tractorId?: number;
+    trailerId?: number;
+    statusId?: number;
+    startDateTime?: string;
+    endDateTime?: string;
+    operationalNotes?: string;
+    description: string; // Justificación obligatoria
+}
+
 export interface ServiceResponse<T = Service> {
     status: string;
     message?: string;
