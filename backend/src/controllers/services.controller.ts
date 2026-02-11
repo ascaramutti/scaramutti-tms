@@ -55,8 +55,8 @@ export const createService = async (req: Request<{}, {}, CreateServiceRequest>, 
         const newService = result.rows[0];
 
         const logSql = `
-            INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status)
-            VALUES ($1, $2, 'CREATED', 'Service created', 'N/A', 'pending_assigment')
+            INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description)
+            VALUES ($1, $2, 'CREATED', 'status', 'Estado', 'N/A', 'pending_assigment', 'Service created')
         `;
         await query(logSql, [newService!.id, userId]);
 
@@ -398,8 +398,8 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
         ]);
 
         const logSql = `
-            INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status)
-            VALUES ($1, $2, 'ASSIGNMENT', 'ASSIGNMENT', $3, 'pending_start')
+            INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description)
+            VALUES ($1, $2, 'ASSIGNMENT', 'status', 'Estado', $3, 'pending_start', 'ASSIGNMENT')
         `;
         await query(logSql, [id, userId, oldStatusName])
 
@@ -495,8 +495,8 @@ export const changeStatus = async (req: Request, res: Response<Service | ErrorRe
         const result = await query<Service>(updateSql, [newStatusId, userId, noteAppend, id, status, date]);
 
         await query(
-            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status) VALUES ($1, $2, 'STATUS_CHANGE', $3, $4, $5)`,
-            [id, userId, `Status updated to ${status}`, currentStatus, status]
+            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description) VALUES ($1, $2, 'STATUS_CHANGE', 'status', 'Estado', $3, $4, $5)`,
+            [id, userId, currentStatus, status, `Status updated to ${status}`]
         );
 
         await query('COMMIT');
@@ -606,8 +606,8 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
         }
 
         await query(
-            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status) VALUES ($1, $2, 'ADMIN_UPDATE', $3, $4, $5)`,
-            [id, userId, body.description, oldStatusName, newStatusName]
+            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description) VALUES ($1, $2, 'ADMIN_UPDATE', 'status', 'Estado', $3, $4, $5)`,
+            [id, userId, oldStatusName, newStatusName, body.description]
         );
 
         await query('COMMIT');
