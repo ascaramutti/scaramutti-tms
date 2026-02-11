@@ -556,6 +556,30 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
         operationalNotes: 'operational_notes'
     };
 
+    // Tarea 4: Mapeo de nombres de campo a etiquetas en español para auditoría
+    const fieldLabelMap: Record<string, string> = {
+        clientId: 'Cliente',
+        origin: 'Origen',
+        destination: 'Destino',
+        tentativeDate: 'Fecha Tentativa',
+        serviceTypeId: 'Tipo de Servicio',
+        cargoTypeId: 'Tipo de Carga',
+        weight: 'Peso',
+        length: 'Largo',
+        width: 'Ancho',
+        height: 'Alto',
+        observations: 'Observaciones',
+        price: 'Precio',
+        currencyId: 'Moneda',
+        driverId: 'Conductor',
+        tractorId: 'Tracto',
+        trailerId: 'Trailer',
+        statusId: 'Estado',
+        startDateTime: 'Fecha de Inicio',
+        endDateTime: 'Fecha de Fin',
+        operationalNotes: 'Notas Operacionales'
+    };
+
     try {
         await query('BEGIN');
 
@@ -582,12 +606,43 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
         }
 
         const currentService = currentServiceRes.rows[0];
+        const currentStatus = currentService.status_name;
+
+        // Validación 3: Campos permitidos según estado del servicio
+        const restrictedFields: Record<string, string[]> = {
+            'pending_assignment': ['driverId', 'tractorId', 'trailerId', 'startDateTime', 'endDateTime', 'operationalNotes'],
+            'pending_start': ['startDateTime', 'endDateTime'],
+            'in_progress': ['endDateTime']
+            // 'completed': sin restricciones
+        };
+
+        const attemptedFields = Object.keys(body).filter(k => k !== 'description' && k !== 'statusId');
+        const restricted = restrictedFields[currentStatus] || [];
+
+        for (const field of attemptedFields) {
+            if (restricted.includes(field)) {
+                await query('ROLLBACK');
+                res.status(400).json({
+                    status: 'ERROR',
+                    message: `No se puede editar '${fieldLabelMap[field] || field}' en estado '${currentStatus}'`
+                });
+                return;
+            }
+        }
 
         // Comparar valores actuales vs nuevos para detectar cambios reales
         const updates: string[] = [];
         const values: any[] = [];
         let paramIndex = 1;
         let hasChanges = false;
+
+        // Tarea 4: Array para almacenar cambios detectados y generar auditoría por campo
+        const changedFields: Array<{
+            fieldName: string;
+            fieldLabel: string;
+            oldValue: any;
+            newValue: any;
+        }> = [];
 
         Object.keys(body).forEach(key => {
             if (key === 'description') return; // Skip description field
@@ -623,6 +678,14 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
                     values.push(newValue);
                     paramIndex++;
                     hasChanges = true;
+
+                    // Tarea 4: Guardar cambio para auditoría detallada
+                    changedFields.push({
+                        fieldName: key,
+                        fieldLabel: fieldLabelMap[key] || key,
+                        oldValue: currentValue,
+                        newValue: newValue
+                    });
                 }
             }
         });
@@ -656,16 +719,18 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
             return;
         }
 
-        // Por ahora, registro genérico de auditoría (Tarea 4: auditoría por campo)
-        const oldStatusName = currentService.status_name;
-        const newStatusName = body.statusId
-            ? (await query<{ name: string }>(`SELECT name FROM service_statuses WHERE id = $1`, [body.statusId])).rows[0]?.name || oldStatusName
-            : oldStatusName;
+        // Tarea 4: Auditoría detallada por campo - insertar un registro por cada campo modificado
+        for (const field of changedFields) {
+            // Formatear valores para auditoría
+            const oldValueStr = field.oldValue == null ? 'NULL' : String(field.oldValue);
+            const newValueStr = field.newValue == null ? 'NULL' : String(field.newValue);
 
-        await query(
-            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description) VALUES ($1, $2, 'ADMIN_UPDATE', 'status', 'Estado', $3, $4, $5)`,
-            [id, userId, oldStatusName, newStatusName, body.description]
-        );
+            await query(
+                `INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description)
+                 VALUES ($1, $2, 'field_edit', $3, $4, $5, $6, $7)`,
+                [id, userId, field.fieldName, field.fieldLabel, oldValueStr, newValueStr, body.description]
+            );
+        }
 
         await query('COMMIT');
         res.status(200).json(result.rows[0]);
