@@ -7,6 +7,66 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Agregado
+
+**Edición de Servicios con Justificación Obligatoria (US-004)**
+- Permite editar información de servicios en cualquier estado con justificación obligatoria para auditoría
+- Validaciones por estado del servicio (campos editables dependen del estado)
+- Auditoría detallada por campo modificado (cada cambio genera un registro individual)
+- Permisos extendidos: Admin, Sales, Gerentes pueden editar (solo Admin puede cambiar estado)
+
+**Backend:**
+- Endpoint PUT `/api/services/:id` refactorizado completamente:
+  - Permisos actualizados: `['admin', 'sales', 'general_manager', 'operations_manager']`
+  - Solo Admin puede editar campo `statusId` directamente
+  - Justificación obligatoria (mínimo 10 caracteres) compartida entre todos los cambios
+  - Detección automática de campos modificados (al menos 1 cambio requerido)
+  - Validaciones por estado: campos permitidos según estado del servicio
+  - Comparación numérica correcta para evitar falsos duplicados
+- Auditoría por campo en `service_audit_logs`:
+  - Cada campo modificado genera UN registro individual con `change_type='field_edit'`
+  - Campos: `field_name` (técnico), `field_label` (legible), `old_value`, `new_value`
+  - Mapeo completo de 19 campos editables a etiquetas en español
+- Refactorización de 4 endpoints existentes para usar nueva estructura de auditoría:
+  - `createService()`, `assignResources()`, `changeStatus()`, `updateService()`
+  - Diseño consistente: TODOS los cambios de estado usan `field_name='status'`, `field_label='Estado'`
+
+**Frontend:**
+- Componente `EditServiceModal` para editar servicios existentes:
+  - Pre-carga valores actuales del servicio
+  - Campos visibles según estado del servicio (lógica de visibilidad)
+  - Detección automática de cambios (comparación formData vs valores originales)
+  - Campo "Justificación" obligatorio con validación mínima 10 caracteres
+  - Validación: al menos 1 campo debe cambiar para habilitar guardado
+  - Manejo de errores (403 sin permisos, 400 sin cambios, validaciones)
+- Integración en `ServiceDetailModal`:
+  - Botón "Editar Servicio" con validación de permisos por rol
+  - Recarga automática de datos al guardar cambios exitosamente
+- Interfaces TypeScript actualizadas:
+  - `UpdateServiceRequest` con todos los campos editables
+  - `ServiceUpdateField` para tracking de cambios
+
+**Base de Datos:**
+- **Migración 003:** Refactorización de tabla `service_audit_logs` para auditoría genérica
+  - Agregadas columnas: `old_value`, `new_value`, `field_name`, `field_label` (nullable)
+  - Migración de datos existentes: `old_status` → `old_value`, `new_status` → `new_value`
+  - Actualización de 105 registros existentes con `field_name='status'`, `field_label='Estado'`
+  - Eliminadas columnas legacy: `old_status`, `new_status`
+  - Índices creados: `change_type`, `field_name`, `service_id + change_type`
+- **Migración 004:** Ampliación de columnas para soportar timestamps largos
+  - `old_value` y `new_value`: VARCHAR(50) → VARCHAR(255)
+
+### Testing
+- ✅ Backend: 10+ casos de prueba ejecutados (validaciones, permisos, auditoría, estados)
+- ✅ Frontend: 14 casos de prueba ejecutados (modal, validaciones, permisos, estados)
+- ✅ Base de datos: 105 registros migrados exitosamente sin pérdida de datos
+
+### Técnico
+- 4 archivos modificados en backend (migraciones, controllers, rutas)
+- 4 archivos modificados en frontend (componentes, interfaces, servicios)
+- 2 migraciones de base de datos ejecutadas
+- Versión sincronizada en backend y frontend: 1.3.0
+
 ### Próximas Features
 - Reporte de servicios completados para cálculo de bonos semanales
 - CI/CD con GitHub Actions

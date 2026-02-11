@@ -1,5 +1,5 @@
 import api from './api';
-import type { Service, CreateServiceRequest, ChangeStatusPayload, AssignResourcesPayload, AddServiceAssignmentPayload, AdditionalAssignment } from '../interfaces/services.interface';
+import type { Service, CreateServiceRequest, ChangeStatusPayload, AssignResourcesPayload, AddServiceAssignmentPayload, AdditionalAssignment, UpdateServiceRequest } from '../interfaces/services.interface';
 
 export const servicesService = {
     getServices: async (filters?: { status?: string; date?: string; clientId?: number; search?: string; limit?: number; offset?: number; sort?: 'recent' }): Promise<{ services: Service[]; total: number }> => {
@@ -39,5 +39,11 @@ export const servicesService = {
     addServiceAssignment: async (serviceId: number, data: AddServiceAssignmentPayload): Promise<AdditionalAssignment> => {
         const response = await api.post<{ data: AdditionalAssignment }>(`/services/${serviceId}/assignments`, data);
         return response.data.data;
+    },
+
+    // US-004: Editar servicio con justificación
+    updateService: async (serviceId: number, data: UpdateServiceRequest): Promise<Service> => {
+        const response = await api.put<Service>(`/services/${serviceId}`, data);
+        return response.data;
     }
 };

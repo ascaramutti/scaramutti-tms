@@ -55,8 +55,8 @@ export const createService = async (req: Request<{}, {}, CreateServiceRequest>, 
         const newService = result.rows[0];
 
         const logSql = `
-            INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status)
-            VALUES ($1, $2, 'CREATED', 'Service created', 'N/A', 'pending_assigment')
+            INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description)
+            VALUES ($1, $2, 'CREATED', 'status', 'Estado', 'N/A', 'pending_assigment', 'Service created')
         `;
         await query(logSql, [newService!.id, userId]);
 
@@ -398,8 +398,8 @@ export const assignResources = async (req: Request, res: Response<Service | Erro
         ]);
 
         const logSql = `
-            INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status)
-            VALUES ($1, $2, 'ASSIGNMENT', 'ASSIGNMENT', $3, 'pending_start')
+            INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description)
+            VALUES ($1, $2, 'ASSIGNMENT', 'status', 'Estado', $3, 'pending_start', 'ASSIGNMENT')
         `;
         await query(logSql, [id, userId, oldStatusName])
 
@@ -495,8 +495,8 @@ export const changeStatus = async (req: Request, res: Response<Service | ErrorRe
         const result = await query<Service>(updateSql, [newStatusId, userId, noteAppend, id, status, date]);
 
         await query(
-            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status) VALUES ($1, $2, 'STATUS_CHANGE', $3, $4, $5)`,
-            [id, userId, `Status updated to ${status}`, currentStatus, status]
+            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description) VALUES ($1, $2, 'STATUS_CHANGE', 'status', 'Estado', $3, $4, $5)`,
+            [id, userId, currentStatus, status, `Status updated to ${status}`]
         );
 
         await query('COMMIT');
@@ -513,11 +513,26 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
     const { id } = req.params;
     const body = req.body as UpdateServiceRequest;
     const userId = (req as AuthenticatedRequest).user?.id;
+    const userRole = (req as AuthenticatedRequest).user?.role;
 
-    if (!body.description) {
-        res.status(400).json({ status: 'ERROR', message: 'Description (reason) is required for Admin Override' });
+    // Validación 1: Justificación obligatoria (mínimo 10 caracteres)
+    if (!body.description || body.description.trim().length < 10) {
+        res.status(400).json({
+            status: 'ERROR',
+            message: body.description ? 'La justificación debe tener al menos 10 caracteres' : 'Debe ingresar una justificación para los cambios'
+        });
         return;
     }
+
+    // Validación 2: Solo admin puede editar statusId
+    if (body.statusId && userRole !== 'admin') {
+        res.status(403).json({
+            status: 'ERROR',
+            message: 'Solo administradores pueden cambiar el estado del servicio'
+        });
+        return;
+    }
+
     const fieldMap: Record<string, string> = {
         clientId: 'client_id',
         origin: 'origin',
@@ -541,45 +556,144 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
         operationalNotes: 'operational_notes'
     };
 
+    // Tarea 4: Mapeo de nombres de campo a etiquetas en español para auditoría
+    const fieldLabelMap: Record<string, string> = {
+        clientId: 'Cliente',
+        origin: 'Origen',
+        destination: 'Destino',
+        tentativeDate: 'Fecha Tentativa',
+        serviceTypeId: 'Tipo de Servicio',
+        cargoTypeId: 'Tipo de Carga',
+        weight: 'Peso',
+        length: 'Largo',
+        width: 'Ancho',
+        height: 'Alto',
+        observations: 'Observaciones',
+        price: 'Precio',
+        currencyId: 'Moneda',
+        driverId: 'Conductor',
+        tractorId: 'Tracto',
+        trailerId: 'Trailer',
+        statusId: 'Estado',
+        startDateTime: 'Fecha de Inicio',
+        endDateTime: 'Fecha de Fin',
+        operationalNotes: 'Notas Operacionales'
+    };
+
     try {
         await query('BEGIN');
 
-        const currentRes = await query<{ status_name: string }>(
-            `SELECT ss.name as status_name FROM services s JOIN service_statuses ss ON s.status_id = ss.id WHERE s.id = $1`,
+        // Obtener valores actuales del servicio completo
+        const currentServiceRes = await query<any>(
+            `SELECT
+                s.client_id, s.origin, s.destination, s.tentative_date,
+                s.service_type_id, s.cargo_type_id,
+                s.weight, s.length, s.width, s.height, s.observations,
+                s.price, s.currency_id,
+                s.driver_id, s.tractor_id, s.trailer_id,
+                s.status_id, s.start_date_time, s.end_date_time, s.operational_notes,
+                ss.name as status_name
+            FROM services s
+            JOIN service_statuses ss ON s.status_id = ss.id
+            WHERE s.id = $1`,
             [id]
         );
 
-        if (currentRes.rows.length === 0) {
+        if (currentServiceRes.rows.length === 0) {
             await query('ROLLBACK');
             res.status(404).json({ status: 'ERROR', message: 'Service not found' });
             return;
         }
-        const oldStatusName = currentRes.rows[0]!.status_name;
-        let newStatusName = oldStatusName;
 
-        if (body.statusId) {
-            const statusRes = await query<{ name: string }>(`SELECT name FROM service_statuses WHERE id = $1`, [body.statusId]);
-            if (statusRes.rows[0]) {
-                newStatusName = statusRes.rows[0].name;
+        const currentService = currentServiceRes.rows[0];
+        const currentStatus = currentService.status_name;
+
+        // Validación 3: Campos permitidos según estado del servicio
+        const restrictedFields: Record<string, string[]> = {
+            'pending_assignment': ['driverId', 'tractorId', 'trailerId', 'startDateTime', 'endDateTime', 'operationalNotes'],
+            'pending_start': ['startDateTime', 'endDateTime'],
+            'in_progress': ['endDateTime']
+            // 'completed': sin restricciones
+        };
+
+        const attemptedFields = Object.keys(body).filter(k => k !== 'description' && k !== 'statusId');
+        const restricted = restrictedFields[currentStatus] || [];
+
+        for (const field of attemptedFields) {
+            if (restricted.includes(field)) {
+                await query('ROLLBACK');
+                res.status(400).json({
+                    status: 'ERROR',
+                    message: `No se puede editar '${fieldLabelMap[field] || field}' en estado '${currentStatus}'`
+                });
+                return;
             }
         }
 
+        // Comparar valores actuales vs nuevos para detectar cambios reales
         const updates: string[] = [];
         const values: any[] = [];
         let paramIndex = 1;
+        let hasChanges = false;
+
+        // Tarea 4: Array para almacenar cambios detectados y generar auditoría por campo
+        const changedFields: Array<{
+            fieldName: string;
+            fieldLabel: string;
+            oldValue: any;
+            newValue: any;
+        }> = [];
 
         Object.keys(body).forEach(key => {
+            if (key === 'description') return; // Skip description field
+
             const dbCol = fieldMap[key];
-            if (dbCol && body[key as keyof UpdateServiceRequest] !== undefined) {
-                updates.push(`${dbCol} = $${paramIndex}`);
-                values.push(body[key as keyof UpdateServiceRequest]);
-                paramIndex++;
+            const newValue = body[key as keyof UpdateServiceRequest];
+
+            if (dbCol && newValue !== undefined) {
+                const currentValue = currentService[dbCol];
+
+                // Comparar valores según tipo
+                let hasChanged = false;
+
+                if (currentValue == null && newValue != null) {
+                    // NULL → valor: es un cambio
+                    hasChanged = true;
+                } else if (currentValue != null && newValue == null) {
+                    // valor → NULL: es un cambio
+                    hasChanged = true;
+                } else if (currentValue != null && newValue != null) {
+                    // Ambos tienen valor: comparar según tipo
+                    if (typeof newValue === 'number') {
+                        // Para números, comparar como números
+                        hasChanged = Number(currentValue) !== Number(newValue);
+                    } else {
+                        // Para strings (incluyendo fechas ISO), comparar como strings
+                        hasChanged = String(currentValue).trim() !== String(newValue).trim();
+                    }
+                }
+
+                if (hasChanged) {
+                    updates.push(`${dbCol} = $${paramIndex}`);
+                    values.push(newValue);
+                    paramIndex++;
+                    hasChanges = true;
+
+                    // Tarea 4: Guardar cambio para auditoría detallada
+                    changedFields.push({
+                        fieldName: key,
+                        fieldLabel: fieldLabelMap[key] || key,
+                        oldValue: currentValue,
+                        newValue: newValue
+                    });
+                }
             }
         });
 
-        if (updates.length === 0) {
+        // Validación 3: Al menos un campo debe haber cambiado
+        if (!hasChanges) {
             await query('ROLLBACK');
-            res.status(400).json({ status: 'ERROR', message: 'No fields to update' });
+            res.status(400).json({ status: 'ERROR', message: 'No se detectaron cambios en el servicio' });
             return;
         }
 
@@ -591,8 +705,8 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
 
         values.push(id);
         const sql = `
-            UPDATE services 
-            SET ${updates.join(', ')} 
+            UPDATE services
+            SET ${updates.join(', ')}
             WHERE id = $${paramIndex}
             RETURNING *
         `;
@@ -605,17 +719,25 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
             return;
         }
 
-        await query(
-            `INSERT INTO service_audit_logs (service_id, changed_by, change_type, description, old_status, new_status) VALUES ($1, $2, 'ADMIN_UPDATE', $3, $4, $5)`,
-            [id, userId, body.description, oldStatusName, newStatusName]
-        );
+        // Tarea 4: Auditoría detallada por campo - insertar un registro por cada campo modificado
+        for (const field of changedFields) {
+            // Formatear valores para auditoría
+            const oldValueStr = field.oldValue == null ? 'NULL' : String(field.oldValue);
+            const newValueStr = field.newValue == null ? 'NULL' : String(field.newValue);
+
+            await query(
+                `INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description)
+                 VALUES ($1, $2, 'field_edit', $3, $4, $5, $6, $7)`,
+                [id, userId, field.fieldName, field.fieldLabel, oldValueStr, newValueStr, body.description]
+            );
+        }
 
         await query('COMMIT');
         res.status(200).json(result.rows[0]);
 
     } catch (error) {
         await query('ROLLBACK');
-        console.error(`Admin Update Error: ${error}`);
+        console.error(`Update Service Error: ${error}`);
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
 };

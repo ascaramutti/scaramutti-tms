@@ -7,7 +7,7 @@ const router: Router = Router();
 router.post('/', validateToken, authorizeRoles(['admin', 'general_manager', 'operations_manager', 'sales']), createService);
 router.get('/', validateToken, getServices);
 router.get('/:id', validateToken, getServiceById);
-router.put('/:id', validateToken, authorizeRoles(['admin']), updateService);
+router.put('/:id', validateToken, authorizeRoles(['admin', 'sales', 'general_manager', 'operations_manager']), updateService);
 router.patch('/:id/assign', validateToken, authorizeRoles(['admin', 'general_manager', 'operations_manager', 'dispatcher']), assignResources);
 router.patch('/:id/status', validateToken, authorizeRoles(['admin', 'general_manager', 'operations_manager', 'dispatcher']), changeStatus);
 

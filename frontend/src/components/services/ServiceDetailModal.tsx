@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { X, MapPin, Calendar, User, Truck, DollarSign, Package, AlertCircle, FileText, Clock, Plus, Users } from 'lucide-react';
+import { X, MapPin, Calendar, User, Truck, DollarSign, Package, AlertCircle, FileText, Clock, Plus, Users, Edit } from 'lucide-react';
 import type { Service } from '../../interfaces/services.interface';
 import { AddUnitsModal } from './AddUnitsModal';
+import { EditServiceModal } from './EditServiceModal';
 import { useAuth } from '../../context/AuthContext';
 
 interface ServiceDetailModalProps {
@@ -14,13 +15,23 @@ interface ServiceDetailModalProps {
 export function ServiceDetailModal({ isOpen, onClose, service, onRefresh }: ServiceDetailModalProps) {
     const { user } = useAuth();
     const [isAddUnitsModalOpen, setIsAddUnitsModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     if (!isOpen || !service) return null;
 
     // Roles autorizados para agregar recursos adicionales
     const canAddResources = ['admin', 'general_manager', 'operations_manager', 'dispatcher'].includes(user?.role || '');
 
+    // US-004: Roles autorizados para editar servicios
+    const canEditService = ['admin', 'sales', 'general_manager', 'operations_manager'].includes(user?.role || '');
+
     const handleAddUnitsSuccess = () => {
+        if (onRefresh) {
+            onRefresh();
+        }
+    };
+
+    const handleEditSuccess = () => {
         if (onRefresh) {
             onRefresh();
         }
@@ -69,9 +80,21 @@ export function ServiceDetailModal({ isOpen, onClose, service, onRefresh }: Serv
                             {getStatusName(service.status_name)}
                         </span>
                     </div>
-                    <button onClick={onClose} className="text-white/80 hover:text-white transition-colors">
-                        <X className="w-6 h-6" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* US-004: Botón de editar servicio */}
+                        {canEditService && (
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="text-white/80 hover:text-white transition-colors p-1.5 hover:bg-white/10 rounded-lg"
+                                title="Editar Servicio"
+                            >
+                                <Edit className="w-5 h-5" />
+                            </button>
+                        )}
+                        <button onClick={onClose} className="text-white/80 hover:text-white transition-colors">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="p-6 space-y-6">
@@ -366,6 +389,14 @@ export function ServiceDetailModal({ isOpen, onClose, service, onRefresh }: Serv
                 onClose={() => setIsAddUnitsModalOpen(false)}
                 service={service}
                 onSuccess={handleAddUnitsSuccess}
+            />
+
+            {/* US-004: Modal Editar Servicio */}
+            <EditServiceModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                service={service}
+                onSuccess={handleEditSuccess}
             />
         </div>
     );
