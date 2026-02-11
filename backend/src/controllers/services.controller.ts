@@ -598,11 +598,27 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
             if (dbCol && newValue !== undefined) {
                 const currentValue = currentService[dbCol];
 
-                // Comparar valores (convertir a string para comparación consistente)
-                const currentStr = currentValue != null ? String(currentValue) : null;
-                const newStr = newValue != null ? String(newValue) : null;
+                // Comparar valores según tipo
+                let hasChanged = false;
 
-                if (currentStr !== newStr) {
+                if (currentValue == null && newValue != null) {
+                    // NULL → valor: es un cambio
+                    hasChanged = true;
+                } else if (currentValue != null && newValue == null) {
+                    // valor → NULL: es un cambio
+                    hasChanged = true;
+                } else if (currentValue != null && newValue != null) {
+                    // Ambos tienen valor: comparar según tipo
+                    if (typeof newValue === 'number') {
+                        // Para números, comparar como números
+                        hasChanged = Number(currentValue) !== Number(newValue);
+                    } else {
+                        // Para strings (incluyendo fechas ISO), comparar como strings
+                        hasChanged = String(currentValue).trim() !== String(newValue).trim();
+                    }
+                }
+
+                if (hasChanged) {
                     updates.push(`${dbCol} = $${paramIndex}`);
                     values.push(newValue);
                     paramIndex++;
