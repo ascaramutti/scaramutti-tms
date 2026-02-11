@@ -513,11 +513,26 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
     const { id } = req.params;
     const body = req.body as UpdateServiceRequest;
     const userId = (req as AuthenticatedRequest).user?.id;
+    const userRole = (req as AuthenticatedRequest).user?.role;
 
-    if (!body.description) {
-        res.status(400).json({ status: 'ERROR', message: 'Description (reason) is required for Admin Override' });
+    // Validación 1: Justificación obligatoria (mínimo 10 caracteres)
+    if (!body.description || body.description.trim().length < 10) {
+        res.status(400).json({
+            status: 'ERROR',
+            message: body.description ? 'La justificación debe tener al menos 10 caracteres' : 'Debe ingresar una justificación para los cambios'
+        });
         return;
     }
+
+    // Validación 2: Solo admin puede editar statusId
+    if (body.statusId && userRole !== 'admin') {
+        res.status(403).json({
+            status: 'ERROR',
+            message: 'Solo administradores pueden cambiar el estado del servicio'
+        });
+        return;
+    }
+
     const fieldMap: Record<string, string> = {
         clientId: 'client_id',
         origin: 'origin',
@@ -544,42 +559,62 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
     try {
         await query('BEGIN');
 
-        const currentRes = await query<{ status_name: string }>(
-            `SELECT ss.name as status_name FROM services s JOIN service_statuses ss ON s.status_id = ss.id WHERE s.id = $1`,
+        // Obtener valores actuales del servicio completo
+        const currentServiceRes = await query<any>(
+            `SELECT
+                s.client_id, s.origin, s.destination, s.tentative_date,
+                s.service_type_id, s.cargo_type_id,
+                s.weight, s.length, s.width, s.height, s.observations,
+                s.price, s.currency_id,
+                s.driver_id, s.tractor_id, s.trailer_id,
+                s.status_id, s.start_date_time, s.end_date_time, s.operational_notes,
+                ss.name as status_name
+            FROM services s
+            JOIN service_statuses ss ON s.status_id = ss.id
+            WHERE s.id = $1`,
             [id]
         );
 
-        if (currentRes.rows.length === 0) {
+        if (currentServiceRes.rows.length === 0) {
             await query('ROLLBACK');
             res.status(404).json({ status: 'ERROR', message: 'Service not found' });
             return;
         }
-        const oldStatusName = currentRes.rows[0]!.status_name;
-        let newStatusName = oldStatusName;
 
-        if (body.statusId) {
-            const statusRes = await query<{ name: string }>(`SELECT name FROM service_statuses WHERE id = $1`, [body.statusId]);
-            if (statusRes.rows[0]) {
-                newStatusName = statusRes.rows[0].name;
-            }
-        }
+        const currentService = currentServiceRes.rows[0];
 
+        // Comparar valores actuales vs nuevos para detectar cambios reales
         const updates: string[] = [];
         const values: any[] = [];
         let paramIndex = 1;
+        let hasChanges = false;
 
         Object.keys(body).forEach(key => {
+            if (key === 'description') return; // Skip description field
+
             const dbCol = fieldMap[key];
-            if (dbCol && body[key as keyof UpdateServiceRequest] !== undefined) {
-                updates.push(`${dbCol} = $${paramIndex}`);
-                values.push(body[key as keyof UpdateServiceRequest]);
-                paramIndex++;
+            const newValue = body[key as keyof UpdateServiceRequest];
+
+            if (dbCol && newValue !== undefined) {
+                const currentValue = currentService[dbCol];
+
+                // Comparar valores (convertir a string para comparación consistente)
+                const currentStr = currentValue != null ? String(currentValue) : null;
+                const newStr = newValue != null ? String(newValue) : null;
+
+                if (currentStr !== newStr) {
+                    updates.push(`${dbCol} = $${paramIndex}`);
+                    values.push(newValue);
+                    paramIndex++;
+                    hasChanges = true;
+                }
             }
         });
 
-        if (updates.length === 0) {
+        // Validación 3: Al menos un campo debe haber cambiado
+        if (!hasChanges) {
             await query('ROLLBACK');
-            res.status(400).json({ status: 'ERROR', message: 'No fields to update' });
+            res.status(400).json({ status: 'ERROR', message: 'No se detectaron cambios en el servicio' });
             return;
         }
 
@@ -591,8 +626,8 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
 
         values.push(id);
         const sql = `
-            UPDATE services 
-            SET ${updates.join(', ')} 
+            UPDATE services
+            SET ${updates.join(', ')}
             WHERE id = $${paramIndex}
             RETURNING *
         `;
@@ -605,6 +640,12 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
             return;
         }
 
+        // Por ahora, registro genérico de auditoría (Tarea 4: auditoría por campo)
+        const oldStatusName = currentService.status_name;
+        const newStatusName = body.statusId
+            ? (await query<{ name: string }>(`SELECT name FROM service_statuses WHERE id = $1`, [body.statusId])).rows[0]?.name || oldStatusName
+            : oldStatusName;
+
         await query(
             `INSERT INTO service_audit_logs (service_id, changed_by, change_type, field_name, field_label, old_value, new_value, description) VALUES ($1, $2, 'ADMIN_UPDATE', 'status', 'Estado', $3, $4, $5)`,
             [id, userId, oldStatusName, newStatusName, body.description]
@@ -615,7 +656,7 @@ export const updateService = async (req: Request, res: Response<Service | ErrorR
 
     } catch (error) {
         await query('ROLLBACK');
-        console.error(`Admin Update Error: ${error}`);
+        console.error(`Update Service Error: ${error}`);
         res.status(500).json({ status: 'ERROR', message: 'Internal server error' });
     }
 };
