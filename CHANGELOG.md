@@ -7,6 +7,77 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+---
+
+## [1.4.0] - 2026-02-13
+
+### Agregado
+
+**Reporte de Viajes Semanales (US-001)**
+- Reporte semanal de servicios completados para revisión gerencial y cálculo manual de bonos
+- Semanas de reporte: Miércoles 00:00 → Martes 23:59 (horario Perú, no semanas calendario)
+- Navegación entre semanas con offset (semana actual, anterior, etc.)
+- Exportación a Excel solo para semanas cerradas
+
+**Backend:**
+- Endpoints GET `/api/reports/weekly-trips` (JSON) y `/api/reports/weekly-trips/export` (Excel):
+  - Roles autorizados: admin, general_manager, operations_manager, sales, dispatcher
+  - Export solo para: admin, general_manager, operations_manager, sales (NO dispatcher)
+  - Dispatcher recibe `price = NULL` en response
+- Query UNION ALL master-detail (conductor principal + conductores adicionales):
+  - JOINs con clients, workers, service_types, service_assignments
+  - Duración calculada en formato "Xd Yh Zm" usando minutos enteros
+  - Transformación a estructura anidada (services con drivers embebidos)
+- Totales separados por moneda (PEN, USD) para evitar sumas incorrectas
+- Exportación Excel con ExcelJS:
+  - Hoja única "Reporte Semanal" (A4 horizontal, sin bordes)
+  - Columnas: Código, Cliente, Conductor(es), Origen, Destino, Tipo, F.Inicio, F.Fin, Duración, Bono, Moneda, Precio
+  - Conductores concatenados (principal + adicionales) en una celda
+  - Colores alternados (filas pares en azul claro #E3F2FD)
+  - Totales al final (TOTAL VIAJES, TOTAL PEN, TOTAL USD)
+  - Columna Bono vacía para cálculo manual del gerente
+
+**Frontend:**
+- Página `WeeklyTripsReportPage.tsx` con diseño de tarjetas:
+  - Header: Código | Cliente | Precio (oculto para dispatcher)
+  - Info: Origen → Destino | Tipo | Duración
+  - Conductores: ● Principal (azul) + ○ Adicionales (gris) con notas
+  - Footer: Fechas inicio-fin (DD/MM/YYYY HH:mm)
+- Navegación entre semanas:
+  - Botones "← Anterior" y "Siguiente →"
+  - Indicador "● Semana actual (datos parciales)" o "Semana cerrada"
+  - Botón "Exportar Excel" deshabilitado en semana actual
+- Permisos por rol:
+  - Dispatcher: NO ve precios, NO ve totales, NO ve botón exportar
+  - Otros roles: Ven información completa
+- Sección "Totales por Moneda" con cards por cada moneda
+- Timezone forzado a America/Lima para consistencia global
+- Toast messages: éxito, error, restricción de semana actual
+
+**Diseño:**
+- Tarjetas con colores alternados (white / blue-50)
+- Separadores **|** en negrita para mejor lectura
+- Punto verde animado en semana actual
+- Card "Completados esta semana" en dashboard clickeable → abre reporte
+
+### Testing
+- ✅ Backend: 5 casos de prueba (estructura anidada, offset, conductores múltiples, Excel)
+- ✅ Frontend: 6 casos de prueba (tarjetas, navegación, exportación, estados)
+- ✅ Roles: 4 casos de prueba (admin, general_manager, sales, dispatcher)
+- ✅ Timezone: Verificado que fechas muestran hora de Lima independiente de ubicación
+
+### Técnico
+- 11 archivos modificados (+2,034 líneas de código)
+- Backend: 3 archivos nuevos (controller, routes, interfaces)
+- Frontend: 3 archivos nuevos (page, interfaces, services)
+- Versión sincronizada en backend y frontend: 1.4.0
+- 4 commits en rama feature/us-001-reporte-viajes-semanales
+- Deploy: develop → main → tag v1.4.0
+
+---
+
+## [1.3.0] - 2026-02-10
+
 ### Agregado
 
 **Edición de Servicios con Justificación Obligatoria (US-004)**
