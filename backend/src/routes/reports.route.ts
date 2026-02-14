@@ -14,7 +14,7 @@ const router: Router = Router();
 router.get(
   '/weekly-trips',
   validateToken,
-  authorizeRoles(['admin', 'general_manager', 'operations_manager', 'dispatcher']),
+  authorizeRoles(['admin', 'general_manager', 'operations_manager', 'sales', 'dispatcher']),
   getWeeklyTrips
 );
 
@@ -28,7 +28,7 @@ router.get(
 router.get(
   '/weekly-trips/export',
   validateToken,
-  authorizeRoles(['admin', 'general_manager', 'operations_manager']),
+  authorizeRoles(['admin', 'general_manager', 'operations_manager', 'sales']),
   exportWeeklyTrips
 );
 

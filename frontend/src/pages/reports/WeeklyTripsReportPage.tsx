@@ -186,18 +186,20 @@ export function WeeklyTripsReportPage() {
                                 Siguiente
                                 <ChevronRight className="w-5 h-5" />
                             </button>
-                            <button
-                                onClick={handleExportToExcel}
-                                disabled={!reportData?.can_export || exporting}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {exporting ? (
-                                    <RefreshCw className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <Download className="w-5 h-5" />
-                                )}
-                                {exporting ? 'Exportando...' : 'Exportar Excel'}
-                            </button>
+                            {user?.role !== 'dispatcher' && (
+                                <button
+                                    onClick={handleExportToExcel}
+                                    disabled={!reportData?.can_export || exporting}
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {exporting ? (
+                                        <RefreshCw className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <Download className="w-5 h-5" />
+                                    )}
+                                    {exporting ? 'Exportando...' : 'Exportar Excel'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -244,9 +246,11 @@ export function WeeklyTripsReportPage() {
                                                         {service.origin} <span className="font-bold">→</span> {service.destination} <span className="font-bold">|</span> {service.service_type} <span className="font-bold">|</span> {service.duration}
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="text-2xl font-bold text-blue-600">{service.currency_code} {Number(service.price).toFixed(2)}</div>
-                                                </div>
+                                                {user?.role !== 'dispatcher' && service.price !== null && (
+                                                    <div className="text-right">
+                                                        <div className="text-2xl font-bold text-blue-600">{service.currency_code} {Number(service.price).toFixed(2)}</div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Conductores */}
@@ -279,8 +283,8 @@ export function WeeklyTripsReportPage() {
                             )}
                         </div>
 
-                        {/* Totals by Currency */}
-                        {reportData?.totals_by_currency && reportData.totals_by_currency.length > 0 && (
+                        {/* Totals by Currency - Solo visible para roles no-dispatcher */}
+                        {user?.role !== 'dispatcher' && reportData?.totals_by_currency && reportData.totals_by_currency.length > 0 && (
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Totales por Moneda</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
