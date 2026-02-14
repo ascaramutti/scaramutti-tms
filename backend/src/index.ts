@@ -24,6 +24,7 @@ import serviceStatusRouter from './routes/service-statuses.route';
 import serviceRouter from './routes/services.route';
 import dashboardRouter from './routes/dashboard.route';
 import serviceTypesRouter from './routes/service-types.route';
+import reportsRouter from './routes/reports.route';
 
 const APP_VERSION = process.env.APP_VERSION || 'v0.0.0';
 const DEPLOY_DATE = process.env.DEPLOY_DATE || new Date().toISOString();
@@ -65,6 +66,7 @@ app.use('/api/service-statuses', serviceStatusRouter);
 app.use('/api/services', serviceRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/service-types', serviceTypesRouter);
+app.use('/api/reports', reportsRouter);
 
 
 app.listen(PORT, () => {
