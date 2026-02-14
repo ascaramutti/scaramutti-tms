@@ -46,8 +46,8 @@ export function StatsCards({ stats, onNavigate, isLoading }: StatsCardsProps) {
       display: stats.services.completed_week,
       icon: CheckCircle,
       color: 'bg-blue-500',
-      route: '/services?status=completed',
-      clickable: false,
+      route: '/reports/weekly-trips',
+      clickable: true,
     },
     {
       title: 'Conductores en Servicio',
