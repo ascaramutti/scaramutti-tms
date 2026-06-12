@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { User, AuthContextType } from "../interfaces/auth.interface";
 import { v2Api } from "../services/api";
-import { sessionStore, mapV2UserToV1, V2_LOGIN_URL, type V2User } from "../services/session";
+import { sessionStore, mapV2UserToV1, LOGIN_URL, type V2User } from "../services/session";
 
 /**
  * Sesión unificada con v2 (SSO): el login vive en v2 (/cotizaciones/login).
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: {children: ReactNode}) {
         sessionStore.clear();
         setUser(null);
         // El login único vive en v2 (otra SPA): full page load.
-        window.location.href = V2_LOGIN_URL;
+        window.location.href = LOGIN_URL;
     }
 
     return (

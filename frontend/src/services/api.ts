@@ -1,5 +1,5 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
-import { sessionStore, V2_LOGIN_URL } from './session';
+import { sessionStore, LOGIN_URL } from './session';
 
 /**
  * Clientes HTTP con sesión compartida v1+v2 (SSO).
@@ -26,7 +26,7 @@ let refreshInFlight: Promise<string> | null = null;
 
 const redirectToLogin = (): void => {
     sessionStore.clear();
-    window.location.href = V2_LOGIN_URL;
+    window.location.href = LOGIN_URL;
 };
 
 const refreshTokens = async (): Promise<string> => {

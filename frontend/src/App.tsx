@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { V2_LOGIN_URL } from './services/session';
+import { LOGIN_URL } from './services/session';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import CreateServicePage from './pages/services/CreateServicePage.tsx';
 import PendingServicesPage from './pages/services/PendingServicesPage.tsx';
@@ -14,7 +14,7 @@ import { WeeklyTripsReportPage } from './pages/reports/WeeklyTripsReportPage.tsx
 // origin): la redirección es externa al router (full page load).
 function RedirectToUnifiedLogin() {
   useEffect(() => {
-    window.location.assign(V2_LOGIN_URL);
+    window.location.assign(LOGIN_URL);
   }, []);
 
   return <div className="flex justify-center items-center h-screen">Redirigiendo al login…</div>;

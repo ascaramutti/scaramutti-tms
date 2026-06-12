@@ -13,8 +13,10 @@ import type { User } from "../interfaces/auth.interface";
 const ACCESS_TOKEN_KEY = "tms.accessToken";
 const REFRESH_TOKEN_KEY = "tms.refreshToken";
 
-// Login único: la pantalla de login vive en v2.
-export const V2_LOGIN_URL = "/cotizaciones/login";
+// Login único: URL NEUTRAL propiedad del gateway (/login → 302 a donde viva
+// la pantalla hoy). v1 NO conoce paths internos de v2: si el auth se extrae a
+// un servicio propio, acá no cambia nada (solo el redirect del gateway).
+export const LOGIN_URL = "/login";
 
 export const sessionStore = {
     getAccessToken: (): string | null => localStorage.getItem(ACCESS_TOKEN_KEY),

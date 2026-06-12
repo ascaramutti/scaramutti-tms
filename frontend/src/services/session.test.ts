@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { sessionStore, mapV2UserToV1, V2_LOGIN_URL, type V2User } from "./session";
+import { sessionStore, mapV2UserToV1, LOGIN_URL, type V2User } from "./session";
 
 // Stub mínimo de localStorage (los tests corren en node, sin DOM).
 function createLocalStorageStub() {
@@ -68,8 +68,8 @@ describe("mapV2UserToV1", () => {
     });
 });
 
-describe("V2_LOGIN_URL", () => {
-    it("apunta al login único de v2", () => {
-        expect(V2_LOGIN_URL).toBe("/cotizaciones/login");
+describe("LOGIN_URL", () => {
+    it("es la URL NEUTRAL del gateway (no conoce paths internos de v2)", () => {
+        expect(LOGIN_URL).toBe("/login");
     });
 });
