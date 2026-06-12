@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { LogOut, User as UserIcon, Plus, AlertCircle, RefreshCw, Search, ChevronRight } from "lucide-react";
+import { FileText, LogOut, User as UserIcon, Plus, AlertCircle, RefreshCw, Search, ChevronRight } from "lucide-react";
 import { dashboardService } from "../services/dashboard.service";
 import { servicesService } from "../services/services.service";
 import { StatsCards } from "../components/dashboard/StatsCards";
@@ -144,6 +144,17 @@ export function DashboardPage() {
                             <p className="text-sm text-gray-600 mt-1">Dashboard de Operaciones</p>
                         </div>
                         <div className="flex items-center gap-4">
+                            {/* Cross-link a v2 (cotizaciones, otra SPA en el mismo origin).
+                                Solo roles con acceso al módulo. */}
+                            {user?.role !== 'dispatcher' && (
+                                <a
+                                    href="/cotizaciones/"
+                                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <FileText className="w-5 h-5" />
+                                    <span className="text-sm font-medium">Cotizaciones</span>
+                                </a>
+                            )}
                             <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg">
                                 <UserIcon className="w-5 h-5 text-gray-600" />
                                 <div className="text-right">

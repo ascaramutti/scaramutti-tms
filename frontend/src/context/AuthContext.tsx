@@ -1,7 +1,13 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import type { User, LoginCredentials, AuthContextType } from "../interfaces/auth.interface";
-import { authService } from "../services/auth.service";
+import type { User, AuthContextType } from "../interfaces/auth.interface";
+import { v2Api } from "../services/api";
+import { sessionStore, mapV2UserToV1, V2_LOGIN_URL, type V2User } from "../services/session";
 
+/**
+ * Sesión unificada con v2 (SSO): el login vive en v2 (/cotizaciones/login).
+ * Acá solo se LEE la sesión compartida: token de localStorage (claves tms.*)
+ * + GET /api/v1/auth/me para hidratar el usuario. Ver services/session.ts.
+ */
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: {children: ReactNode}) {
@@ -9,27 +15,33 @@ export function AuthProvider({ children }: {children: ReactNode}) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-        if(storedToken && storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
+        const loadSession = async () => {
+            if (!sessionStore.getAccessToken()) {
+                // Sin sesión: ProtectedRoute manda al login de v2.
+                setIsLoading(false);
+                return;
+            }
+            try {
+                // v2Api trae el shim de refresh: si el access token expiró,
+                // renueva solo y reintenta. Si el refresh también falla, el
+                // interceptor limpia y redirige al login de v2.
+                const response = await v2Api.get<V2User>('/auth/me');
+                setUser(mapV2UserToV1(response.data));
+            } catch {
+                setUser(null);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-        setIsLoading(false);
+        loadSession();
     }, []);
 
-    const login = async (credentials: LoginCredentials) => {
-        const data = await authService.login(credentials);
-
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
-    };
-
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStore.clear();
         setUser(null);
+        // El login único vive en v2 (otra SPA): full page load.
+        window.location.href = V2_LOGIN_URL;
     }
 
     return (
@@ -37,7 +49,6 @@ export function AuthProvider({ children }: {children: ReactNode}) {
             user,
             isAuthenticated: !!user,
             isLoading,
-            login,
             logout
         }}>
             {children}
