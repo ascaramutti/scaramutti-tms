@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { sessionStore, mapV2UserToV1, LOGIN_URL, type V2User } from "./session";
+import { sessionStore, mapV2UserToV1, LOGIN_URL, CHANGE_PASSWORD_URL, type V2User } from "./session";
 
 // Stub mínimo de localStorage (los tests corren en node, sin DOM).
 function createLocalStorageStub() {
@@ -71,5 +71,11 @@ describe("mapV2UserToV1", () => {
 describe("LOGIN_URL", () => {
     it("es la URL NEUTRAL del gateway (no conoce paths internos de v2)", () => {
         expect(LOGIN_URL).toBe("/login");
+    });
+});
+
+describe("CHANGE_PASSWORD_URL", () => {
+    it("apunta a la pantalla de v2 (única accesible para todos los roles)", () => {
+        expect(CHANGE_PASSWORD_URL).toBe("/cotizaciones/cuenta/cambiar-contrasena");
     });
 });

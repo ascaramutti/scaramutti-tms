@@ -18,6 +18,11 @@ const REFRESH_TOKEN_KEY = "tms.refreshToken";
 // un servicio propio, acá no cambia nada (solo el redirect del gateway).
 export const LOGIN_URL = "/login";
 
+// Cambiar contraseña vive en v2 (única pantalla suya accesible para todos los
+// roles). Path interno de v2 centralizado acá: si algún día se neutraliza vía
+// gateway (como /login), se cambia en este único punto.
+export const CHANGE_PASSWORD_URL = "/cotizaciones/cuenta/cambiar-contrasena";
+
 export const sessionStore = {
     getAccessToken: (): string | null => localStorage.getItem(ACCESS_TOKEN_KEY),
     getRefreshToken: (): string | null => localStorage.getItem(REFRESH_TOKEN_KEY),
