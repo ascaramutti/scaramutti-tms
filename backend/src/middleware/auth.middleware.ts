@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
 import { AuthenticatedRequest, TokenPayload } from "../interfaces/auth/auth.interface";
+import { verifyAccessToken } from "./token-verifier";
 
 export const validateToken = (req: Request, res: Response, next: NextFunction): void => {
     const authHeader: string | undefined = req.headers['authorization'];
@@ -13,8 +13,8 @@ export const validateToken = (req: Request, res: Response, next: NextFunction): 
 
     try {
 
-        const secret: string = process.env.JWT_SECRET!;
-        const decoded = jwt.verify(token, secret) as TokenPayload;
+        // Verificación según AUTH_MODE (legacy HS256 / dual / rs256 de v2).
+        const decoded: TokenPayload = verifyAccessToken(token);
 
         (req as AuthenticatedRequest).user = decoded;
 

@@ -1,8 +1,3 @@
-export interface LoginCredentials {
-    username: string;
-    password: string;
-}
-
 export interface User {
     id: string;
     username: string;
@@ -10,15 +5,11 @@ export interface User {
     name: string;
 }
 
-export interface AuthResponse {
-    token: string;
-    user: User;
-}
-
+// El login vive en v2 (SSO): acá ya no hay login(credentials), solo logout.
+// La sesión se hidrata desde el localStorage compartido + GET /api/v1/auth/me.
 export interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (credentials: LoginCredentials) => Promise<void>;
     logout: () => void;
 }

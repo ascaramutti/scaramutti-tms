@@ -42,5 +42,9 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
-  }
+  },
+  // OJO: declarar "exclude" PISA los defaults de tsc (node_modules, outDir):
+  // hay que re-listarlos o el segundo build falla con TS5055 (los .d.ts de
+  // dist/ entran como inputs). Los tests corren con vitest, no van a dist/.
+  "exclude": ["node_modules", "dist", "src/**/__tests__/**"]
 }
