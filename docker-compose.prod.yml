@@ -48,9 +48,19 @@ services:
       DB_NAME: ${DB_NAME:-scaramutti_tms_prod}
       DB_PORT: 5432
       JWT_SECRET: ${JWT_SECRET}
+      # --- SSO con v2 (ver token-verifier.ts) ---
+      # legacy = solo HS256 propio (default, comportamiento histórico)
+      # dual   = acepta tokens RS256 de v2 + HS256 propio (transición)
+      # rs256  = solo tokens de v2 (estado final)
+      AUTH_MODE: ${AUTH_MODE:-legacy}
+      JWT_PUBLIC_KEY_PATH: /app/keys/v2-publickey.pem
       # Variables de versionado
       APP_VERSION: ${APP_VERSION:-v1.0.0}
       DEPLOY_DATE: ${DEPLOY_DATE:-unknown}
+    volumes:
+      # Clave PÚBLICA de v2 (verifica tokens; no permite emitirlos).
+      # En el server: ~/scaramutti-tms-v2/keys/publickey.pem (repo v2 hermano).
+      - ../scaramutti-tms-v2/keys/publickey.pem:/app/keys/v2-publickey.pem:ro
     # No exponer puerto 3000 al exterior, solo interno a través del proxy
     expose:
       - "3000"
