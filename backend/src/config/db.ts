@@ -6,6 +6,8 @@ const pool: Pool = new Pool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     port: parseInt(process.env.DB_PORT!),
+    // Azure PostgreSQL exige SSL. Activado por env var para no afectar el dev local.
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
 });
 
 pool.on('error', (err) => {
