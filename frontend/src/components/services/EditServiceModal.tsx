@@ -5,6 +5,7 @@ import { servicesService } from '../../services/services.service';
 import { resourcesService } from '../../services/resources.service';
 import { clientService } from '../../services/clients.service';
 import { currenciesService } from '../../services/currencies.service';
+import { toDatetimeLocalInput, fromDatetimeLocalInput } from '../../utils/datetime';
 import type { Service, UpdateServiceRequest } from '../../interfaces/services.interface';
 import type { Driver, Tractor, Trailer } from '../../interfaces/resources.interface';
 import type { Client } from '../../interfaces/clients.interface';
@@ -118,8 +119,8 @@ export function EditServiceModal({ isOpen, onClose, service, onSuccess }: EditSe
             driverId: service.driver_id || null,
             tractorId: service.tractor_id || null,
             trailerId: service.trailer_id || null,
-            startDateTime: service.start_date_time ? service.start_date_time.split('.')[0] : '',
-            endDateTime: service.end_date_time ? service.end_date_time.split('.')[0] : '',
+            startDateTime: service.start_date_time ? toDatetimeLocalInput(service.start_date_time) : '',
+            endDateTime: service.end_date_time ? toDatetimeLocalInput(service.end_date_time) : '',
             operationalNotes: service.operational_notes || ''
         };
 
@@ -192,7 +193,12 @@ export function EditServiceModal({ isOpen, onClose, service, onSuccess }: EditSe
                     };
 
                     const backendField = fieldMap[k] || k;
-                    (payload as any)[backendField] = formData[k];
+
+                    // El input entrega hora local sin zona; el API espera un instante.
+                    const isExecutionDate = k === 'startDateTime' || k === 'endDateTime';
+                    (payload as any)[backendField] = isExecutionDate
+                        ? fromDatetimeLocalInput(formData[k] as string)
+                        : formData[k];
                 }
             });
 

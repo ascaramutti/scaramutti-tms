@@ -43,3 +43,6 @@ coverage/
 *.temp
 backend/temp-hash.js
 frontend/.vite/
+
+# Documentacion local (repo publico: no versionar detalles de infra)
+docs/
